@@ -1,28 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/time.h>
-#include <signal.h>
-
-#define STDIN 0
-#define STDOUT 1
-#define STDERR 2
-
-#define BUFFER_SIZE 1024
-#define MAX_CONNECTION_TO_THE_SERVER 50
-
-#define TRUE  1
-#define FALSE 0
-
-#define DEFAULT_PORT 8081
+#include "../include/const.h"
 
 int setupServer(int port) {
     struct sockaddr_in address;
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); //TCP
-    
+
     int opt = 1;
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     
@@ -34,28 +15,43 @@ int setupServer(int port) {
     
     listen(server_fd, MAX_CONNECTION_TO_THE_SERVER);
 
-    const char message[] ="Server is running.../nWaiting for clients...";
+    const char message[] ="Server is running...\nWaiting for clients...\n";
     write(STDOUT, message, sizeof(message));
-
     return server_fd;
 }
-
 int accept_client(int server_fd) {
     struct sockaddr_in client_address;
     int address_len = sizeof(client_address);
     int client_fd = accept(server_fd, (struct sockaddr *) &client_address, (socklen_t*) &address_len);
 
-    const char message[] = "New client connected\n";
+    const char message[] = "New client accepted.\n";
     write(STDOUT, message, sizeof(message));
 
     return client_fd;
 }
 
+void submit_question() {
+
+}
+
+void make_new_meeting() {
+
+
+}
+
+void add_client_to_meeting() {
+
+}
+
+void change_question_status() {
+
+}
+
 int main(int argc, char const *argv[]) {
     char buffer[BUFFER_SIZE] = {0};
-    
+
     if (argc <= 1) {
-        const char message[] = "server on default port...!";
+        const char message[] = "server on default port...!\n";
         write(STDOUT, message, sizeof(message));
     }
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
@@ -66,15 +62,46 @@ int main(int argc, char const *argv[]) {
     int max_fd = server_fd;
     FD_SET(server_fd, &master_set);   
 
+    int new_client_fd;
+ 
     while(TRUE) {
         working_set = master_set;
         select(max_fd + 1, &working_set, NULL, NULL, NULL);
         
         for(int i = 0; i < max_fd + 1; i++) {
+            if (FD_ISSET(i, &working_set)) { 
+                if (i == server_fd) {
+                    new_client_fd = accept_client(server_fd);
+                    FD_SET(new_client_fd, &master_set);
+                    max_fd = new_client_fd > max_fd ? new_client_fd : max_fd;
 
-            
+                    char message[BUFFER_SIZE] = {0};
+                    sprintf(message ,"New client connected. fd = %d\n", new_client_fd);
+                    write( STDOUT, message, sizeof(message));
+                }
+                else {
+                    memset(buffer, 0, BUFFER_SIZE);
+                    int bytes_received = recv(i, buffer, BUFFER_SIZE, 0);
+                    if (bytes_received == 0) { 
+                        write(STDOUT, "Close client\n", sizeof("Close client"));
+                        close(i);
+                        FD_CLR(i, &master_set);
+                        continue;
+                    }
+                    else {
+                        if (buffer[0] = STUDENT || buffer[0] == TA) {
+                        }
+                        else if (buffer[0] == ASK_QUESTION) {
+                            
+                        }  
+                        else {
+                            write(STDERR, "Invalid comment!\n", sizeof("Invalid comment!\n"));
+
+                        }                  
+                    }
+                    memset(buffer, 0, BUFFER_SIZE);
+                }   
+            }
         }
     }
 }
-
-

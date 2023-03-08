@@ -1,12 +1,17 @@
 CC = gcc
 
-
 SRC = ./src
-INC= ./include
+INC = ./include
+all: server client
 
+server: $(SRC)/server.c  $(INC)/const.h
+	$(CC) $(SRC)/server.c -o server
 
+client: $(SRC)/client.c $(INC)/const.h
+	$(CC) $(SRC)/client.c -o client
 
-#make clean:
-.PHONY: all clean
+PHONY: all clean
 clean:
-	rm -rf *.o
+	rm -rf client 
+	rm -rf server
+	

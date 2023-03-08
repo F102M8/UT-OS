@@ -1,30 +1,4 @@
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/time.h>
-#include <signal.h>
-
-#define STDIN 0
-#define STDOUT 1
-#define STDERR 2
-
-#define BUFFER_SIZE 1024
-#define MAX_CONNECTION_TO_THE_SERVER 50
-
-#define TRUE  1
-#define FALSE 0
-
-#define NET_ADDRESS "127.0.0.1"
-
-#define STUDENT 1
-#define TA 2
-
-int role;
-//-----------------------------------------------------------
+#include "../include/const.h"
 
 int connect_to_server(int port) {
     struct sockaddr_in server_address;
@@ -39,7 +13,7 @@ int connect_to_server(int port) {
         write(STDERR, error, sizeof(error));
     }
     else  { 
-        const char message[] = "Welcome!\n";
+        const char message[] = "connected to the server!\n";
         write(STDOUT, message, sizeof(message));
     }
     return client_fd;
@@ -50,10 +24,14 @@ void alarm_handler(int signal) {
     write(STDOUT, message, sizeof(message));
 }
 
-void set_role() {
-    char message[] = "1. student\n 2.TA\n";
+char set_role() {
+    char role;
+    const char message[] = "Set your role:\n1.STUDENT (type S)\n2.TA      (type T)\n";
     write(STDOUT, message, sizeof(message));
     read(STDIN, role, 1);
+    //error handeling 
+    write(STDOUT, "Welcome!\n", sizeof("Welcome!\n"));
+    return role;
 }
 
 void TA_handler() {
@@ -64,17 +42,26 @@ void student_handler() {
 }
 
 int main(int argc, char const *argv) {
-    signal(SIGALRM, alarm_handler);
-    siginterrupt(SIGALRM, 1);
+    //signal(SIGALRM, alarm_handler);
+    //siginterrupt(SIGALRM, 1);
 
     char buffer[BUFFER_SIZE] = {0};
-
-    int server_fd;
-
     
-    set_role();
+    if (argc <= 1) {
+        const char message[] = "On default port...!\n";
+        write(STDOUT, message, sizeof(message));
+    }
+    
+    int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
+    int server_fd = connect_to_server(server_port);
+
+    char role = set_role();
 
     while(TRUE) {
-
+        memset(buffer, 0, BUFFER_SIZE);
+        read(STDIN, buffer, BUFFER_SIZE);
+        send(server_fd, buffer, BUFFER_SIZE, 0);
+        
     }
-}   
+    return 0;
+}
