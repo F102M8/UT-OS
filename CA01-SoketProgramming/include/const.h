@@ -30,11 +30,11 @@
 #define NET_ADDRESS "127.0.0.1"
 #define BROADCAST_ADDR "192.168.1.255"
 
-#define STUDENT 'S'
-#define TA 'T'
+#define STUDENT "set_S"
+#define TA "set_T"
 
-#define ASK_QUESTION 'Q'
-#define SHOW_MEETINGS 'M'
-#define JOIN_MEETING 'J'
-#define SHOW_LIST_QUESTIONS 'L'
-#define ANSWER 'A'
+#define ASK_QUESTION "ask"
+#define SHOW_MEETINGS "show_m"
+#define JOIN_MEETING "join"
+#define SHOW_LIST_QUESTIONS "ls"
+#define ANSWER "ans"

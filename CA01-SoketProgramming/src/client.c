@@ -42,14 +42,9 @@ void alarm_handler(int signal) {
     write(STDOUT, message, sizeof(message));
 }
 
-char set_role() {
-    char role;
-    const char message[] = "Set your role:\n1.STUDENT (type S)\n2.TA      (type T)\n";
+void welcome() {
+    const char message[] = "Set your role:\n1.STUDENT (type set_S)\n2.TA      (type set_T)\n";
     write(STDOUT, message, sizeof(message));
-    read(STDIN, role, 1);
-    //error handeling 
-    write(STDOUT, "Welcome!\n", sizeof("Welcome!\n"));
-    return role;
 }
 
 void TA_handler() {
@@ -75,12 +70,14 @@ int main(int argc, char const *argv) {
     //int port = recieve_port(port);
     //int client_fd = setup(port);
 
-    char role = set_role();
-
     fd_set master_set, working_set;
     FD_ZERO(&master_set);
     int max_fd = server_fd;
+    FD_SET(STDIN, &master_set);
     FD_SET(server_fd, &master_set); 
+
+    welcome();
+    char role[] = '\0';
 
     while(TRUE) {
         working_set = master_set;
@@ -90,18 +87,20 @@ int main(int argc, char const *argv) {
             if(FD_ISSET(i, &working_set)) {
                 if(i == STDIN) {
                     read(STDIN, buffer, BUFFER_SIZE);
-                    if(buffer[0] == ASK_QUESTION) {
-                        write(STDOUT, buffer, BUFFER_SIZE);
-
-                        send(server_fd, buffer, strlen(buffer), 0);
-                        memset(buffer, 0, BUFFER_SIZE);;
-                    }
-                    if(strcmp(buffer, SHOW_MEETINGS) == 0) {
+                    buffer[strlen(buffer) - 1] = '\0';
+                    if(strcmp(buffer, TA) == 0) {
+                        role[sizeof(TA)] = TA;
+                        const char msg[] = "-ls : show list\n-ans\n";
+                        write(STDOUT, msg, sizeof(msg));
                         send(server_fd, buffer, strlen(buffer), 0);
                         memset(buffer, 0, BUFFER_SIZE);
-                        
                     }
-
+                    if(strcmp(buffer, STUDENT) == 0) {
+                        role[sizeof(STUDENT)] = STUDENT;
+                        send(server_fd, buffer, strlen(buffer), 0);
+                        send(server_fd, role, strlen(role), 1);
+                    }
+                    
                 }
                 else if (i == server_fd) {
                     recv(server_fd, buffer, BUFFER_SIZE, 0);

@@ -4,6 +4,8 @@ struct Question {
     char Q_text[BUFFER_SIZE];
     int status;
     int meeting_port;
+    int fd_S;
+    int fd_TA;
 };
 
 int setupServer(int port) {
@@ -70,7 +72,7 @@ int main(int argc, char const *argv[]) {
     FD_ZERO(&master_set);
     int max_fd = server_fd;
     FD_SET(server_fd, &master_set);   
-
+    fd_set TA_set, student_set;
     int new_client_fd;
  
     while(TRUE) {
@@ -96,15 +98,17 @@ int main(int argc, char const *argv[]) {
                         FD_CLR(i, &master_set);
                         continue;
                     }
+                    recv(i, buffer, strlen(buffer), 0);
                     
-                    //write(STDOUT, "buffer[0]", 30);
-                    if (buffer[0] == ASK_QUESTION) {
-                        write(STDOUT, "S", 1);
-                        send(i, "HEY\n", 10,0);
+                    if (strcmp(buffer, TA) == 0) {
+                        FD_SET(i, &TA_set);
                     }
-                    else {
-                        write(STDOUT, "S",1);
-                            const char spacing[] = "#######################\n";
+                    else if (strcmp(buffer, STUDENT)) {
+                        FD_SET(i, &student_set);
+                    }
+                    else if (strcmp(buffer, SHOW_LIST_QUESTIONS)) {  
+                        //check
+                        const char spacing[] = "#######################\n";
                         send(i, spacing, sizeof(spacing), 0);
                         for(int j = 0; j < question_count; j++) {
                             send(i, questions->Q_text, sizeof(questions->Q_text), 0);
