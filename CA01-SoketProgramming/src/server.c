@@ -1,18 +1,21 @@
 #include "../include/const.h"
-char buffer[BUFFER_SIZE] = {0};
-int TA_fds[MAX_TA];
-int student_fds[MAX_STUDENT];
-int student_count = 0, TA_count = 0;
-
 struct Question {
-    char Q_text[BUFFER_SIZE];
-    int status;
+    char Q_text;
+    Q_level status;
     int meeting_port;
     int fd_S;
     int fd_TA;
 };
 
-int setupServer(int port) {
+char buffer[BUFFER_SIZE] = {0};
+fd_set master_set, working_set;
+fd_set student_set, TA_set;
+fd_set req_ask, req_join, req_ans;
+struct Question questions[MAX_QUESTIONS];
+int question_count = 0;
+
+
+int setup_server(int port) {
     struct sockaddr_in address;
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); //TCP
 
@@ -41,91 +44,100 @@ int accept_client(int server_fd) {
 
     return client_fd;
 }
-bool has_role(int fd,int fd_set[]) {
-    for (int i = 0; i < sizeof(fd_set); i++) {
-        if (fd == fd_set[i])
-            return true;
-    }
-    return false;
-}
-void set_role(char role[], int fd, int role_set[], int index) {
-    role_set[index] = fd; 
+void set_role(char role[], int fd) {
     char message[BUFFER_SIZE] = {0};
-    if (role == STUDENT)
-        sprintf(message ,"$ client fd = %d: set as student.\n", fd);
-    else
-        sprintf(message ,"$ client fd = %d: set as TA.\n", fd);
+    if (role == STUDENT) {
+        sprintf(message ,"+ client fd = %d: set as student.\n", fd);
+        FD_SET(fd, &student_set);
+    }
+    else {
+        sprintf(message ,"+ client fd = %d: set as TA.\n", fd);
+        FD_SET(fd, &TA_set);
+    }
     write(STDOUT, message, sizeof(message));
     send(fd, message, sizeof(message), 0);
-    index ++;
-}
-void remove_client(int fd) {
-
 }
 
-void submit_question(int fd) {
-
-}
-void ask_question(int fd) {
-    if(!has_role(fd, student_fds)) {
-        if(has_role(fd, TA_fds)) {
-            const char message[] = "- seriously?! \n";
+void request_ask(int fd) {
+    if(FD_ISSET(fd, &student_set)) {
+        const char message[] = "+ Ask...\n";
+        send(fd, message, sizeof(message), 0);
+        FD_SET(fd, &req_ask);
+    }
+    else {
+        if(FD_ISSET(fd, &TA_set)) {
+            const char message[] = "- You're a TA!!!!\n";
             send(fd, message, sizeof(message), 0);
         }
         else {
             const char message[] = "- First set your role! \n";
             send(fd, message, sizeof(message), 0);
         }
-        send(fd, REJECT, sizeof(REJECT), 0);
+    }
+}
+void submit_question(int fd) {
+    const char message[] = "+ new question added successfully!\n";
+    questions[question_count].fd_S = fd;
+    questions[question_count].Q_text = buffer;
+    questions[question_count].status = WAITING;
+    write(STDOUT, message, sizeof(message));
+    send(fd, message, sizeof(message), 0);
+    FD_CLR(fd, &req_ask);
+}
+void show_ls_questions(int fd) {
+    if(FD_ISSET(fd, &TA_set)) {
+        for(int i = 0; i < question_count; i++) {
+            if(questions[i].status == WAITING) {
+                char text;
+                sprintf(text, "%s \n",  questions[i].Q_text);
+                write(STDOUT, text, sizeof(text));
+            }
+        }
     }
     else {
-        const char message[] = "- Ask...\n";
-        send(fd, message, sizeof(message), 0);
-        send(fd, ACCEPT, sizeof(ACCEPT), 0);
-        memset(buffer, 0, BUFFER_SIZE);
+        if(FD_ISSET(fd, &student_set)) {
+            const char message[] = "- Do not have permission! \n";
+            send(fd, message, sizeof(message), 0);
+        }
+        else {
+            const char message[] = "- First set your role! \n";
+            send(fd, message, sizeof(message), 0);
+        }
     }
 }
-void make_new_meeting() {
 
-
-}
-
-void add_client_to_meeting() {
-
-}
-
-void change_question_status() {
-
-}
-
-int main(int argc, char const *argv[]) {
-    struct Question questions[MAX_QUESTIONS];
-    int question_count = 0;
+int main(int argc,char const *argv[]) {
     if (argc <= 1) {
         const char message[] = "server on default port...!\n";
         write(STDOUT, message, sizeof(message));
     }
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
-    int server_fd = setupServer(server_port);
+    int server_fd = setup_server(server_port);
 
-    fd_set master_set, working_set;
-    
     FD_ZERO(&master_set);
+    FD_ZERO(&TA_set);
+    FD_ZERO(&student_set);
+    FD_ZERO(&req_ans);
+    FD_ZERO(&req_ask);
+    FD_ZERO(&req_join);
+
     int max_fd = server_fd;
+    //FD_SET(STDIN, &master_set);
     FD_SET(server_fd, &master_set);   
 
     int new_client_fd;
 
-
     while(true) {
         working_set = master_set;
         select(max_fd + 1, &working_set, NULL, NULL, NULL);
+
         for(int i = 0; i < max_fd + 1; i++) {
             if (FD_ISSET(i, &working_set)) { 
                 if (i == server_fd) {
                     new_client_fd = accept_client(server_fd);
                     FD_SET(new_client_fd, &master_set);
-                    max_fd = new_client_fd > max_fd ? new_client_fd : max_fd;
+                    if (new_client_fd > max_fd)
+                        max_fd = new_client_fd;
                     char message[BUFFER_SIZE] = {0};
                     sprintf(message ,"New client connected. fd = %d\n", new_client_fd);
                     write( STDOUT, message, sizeof(message));
@@ -139,46 +151,66 @@ int main(int argc, char const *argv[]) {
                         write(STDOUT, message, sizeof(message));
                         close(i);
                         FD_CLR(i, &master_set);
+                        if(FD_ISSET(i, &TA_set)) {
+                            FD_CLR(i, &TA_set);
+                        }
+                        else if (FD_ISSET(i, &student_set)) {
+                            FD_CLR(i, &student_set);
+                        }
                         continue;
                     }
                     char message[BUFFER_SIZE] = {0};
-                    sprintf(message ,"$ Message from client fd = %d: recieved.\n", i);
+                    sprintf(message ,"Message from client fd = %d: recieved.\n", i);
                     write(STDOUT, message, sizeof(message));
-                    if(strcmp(buffer, STUDENT) == 0) {
-                        if(has_role(i, TA_fds)) {
-                            const char message[] = "- Can not change your role! \n";
-                            send(i, message, sizeof(message), 0);
-                            continue;
-                        }
-                        else if(has_role(i, student_fds)) {
-                            const char message[] = "- Already in list! \n";
-                            send(i, message, sizeof(message), 0);
-                            continue;
-                        }
-                        else {
-                            set_role(STUDENT, i, student_fds, student_count);
-                        }
-                    }
-                    if(strcmp(buffer, TA) == 0) {
-                        if(has_role(i, student_fds)) {
-                            const char message[] = "- Can not change your role! \n";
-                            send(i, message, sizeof(message), 0);
-                        }
-                        else if(has_role(i, TA_fds)) {
-                            const char message[] = "- Already in list! \n";
-                            send(i, message, sizeof(message), 0);
-                        }
-                        else {
-                            set_role(TA, i, TA_fds, TA_count);
-                        }
-                    }
-                    if(strcmp(buffer, ASK_QUESTION) == 0) {
-                        ask_question(i);
-                    }
-                    memset(buffer, 0, BUFFER_SIZE);
-                }   
-            }
-        }
-    }
 
+                    if(strcmp(buffer, STUDENT) == 0) {
+                        if(FD_ISSET(i, &TA_set)) {
+                            const char message[] = "- Can not change your role! \n";
+                            send(i, message, sizeof(message), 0);
+                            continue;
+                        }
+                        else if(FD_ISSET(i, &student_set)) {
+                            const char message[] = "- Already in list! \n";
+                            send(i, message, sizeof(message), 0);
+                            continue;
+                        }
+                        else {
+                            set_role(STUDENT, i);
+                        }
+                    }
+                    else if(strcmp(buffer, TA) == 0) {
+                        if(FD_ISSET(i, &student_set)) {
+                            const char message[] = "- Can not change your role! \n";
+                            send(i, message, sizeof(message), 0);
+                            continue;
+                        }
+                        else if(FD_ISSET(i, &TA_set)) {
+                            const char message[] = "- Already in list! \n";
+                            send(i, message, sizeof(message), 0);
+                            continue;
+                        }
+                        else {
+                            set_role(TA, i);
+                        }
+                    }
+                    else if(strcmp(buffer, ASK_QUESTION) == 0) {
+                        request_ask(i);
+                    }
+                    else if(strcmp(buffer, SHOW_LIST_QUESTIONS) == 0) {
+                        show_ls_questions(i);
+                    }
+                    else {
+                        if(FD_ISSET(i, &req_ask)) {
+                            submit_question(i);
+                        }
+                        else {
+                            const char message[] = "Sth went wrong! \n";
+                            send(i, message, sizeof(message), 0);
+                        }
+                    }
+                }
+                    memset(buffer, 0, BUFFER_SIZE);
+            } 
+        }       
+    }
 }

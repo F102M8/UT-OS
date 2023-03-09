@@ -43,3 +43,10 @@
 #define JOIN_MEETING "join"
 #define SHOW_LIST_QUESTIONS "ls"
 #define ANSWER "ans"
+
+typedef enum
+{
+    WAITING,
+    ANSWERED,
+    UNDER_DISCUSSION,
+} Q_level;

@@ -1,6 +1,9 @@
 #include "../include/const.h"
-char buffer[BUFFER_SIZE] = {0};
 
+char buffer[BUFFER_SIZE] = {0};
+fd_set master_set, working_set;
+
+char role[ROLE_SIZE] = {0};
 int connect_to_server(int port) {
     struct sockaddr_in server_address;
     int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -29,27 +32,18 @@ void welcome() {
     const char message[] = "Set your role:\n1.STUDENT (type set_S)\n2.TA      (type set_T)\n";
     write(STDOUT, message, sizeof(message));
 }
-
 void TA_handler() {
 
 }
 void student_handler() {
-
+    const char message[] = "1. ask new question (type: ask)\n2. show meeting     (type: show_m)\n3. join to meeting  (type: join)\n";
+    write(STDOUT, message, sizeof(message));
 }
 
 void ask_question(int server_fd) {
     send(server_fd, buffer, strlen(buffer), 0);
-    memset(buffer, 0, BUFFER_SIZE);
     recv(server_fd, buffer, BUFFER_SIZE, 0);
-    write(STDOUT, buffer, strlen(buffer));
-    memset(buffer, 0, BUFFER_SIZE);
-    recv(server_fd, buffer, strlen(buffer), 0);
-    buffer[strlen(buffer) - 1] = '\0';
-    if (strcmp(buffer, ACCEPT) == 0) {
-        memset(buffer, 0, BUFFER_SIZE);
-        read(STDIN, buffer,BUFFER_SIZE);
-        send(server_fd, buffer, strlen(buffer),0);
-    }
+    write(STDOUT, buffer, strlen(buffer)); 
     memset(buffer, 0, BUFFER_SIZE);
 }
 
@@ -58,23 +52,21 @@ int main(int argc, char const *argv) {
     //siginterrupt(SIGALRM, 1);
 
     if (argc <= 1) {
-        const char message[] = "On default port...!\n";
+        const char message[] = "on default port...!\n";
         write(STDOUT, message, sizeof(message));
     }
-    
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
     int server_fd = connect_to_server(server_port);
     //int port = recieve_port(port);
     //int client_fd = setup(port);
 
-    fd_set master_set, working_set;
+
     FD_ZERO(&master_set);
     int max_fd = server_fd;
     FD_SET(STDIN, &master_set);
     FD_SET(server_fd, &master_set); 
 
     welcome();
-    char role[ROLE_SIZE] = {0};
 
     while(true) {
         working_set = master_set;
@@ -85,20 +77,40 @@ int main(int argc, char const *argv) {
                 if(i == STDIN) {
                     read(STDIN, buffer, BUFFER_SIZE);
                     buffer[strlen(buffer) - 1] = '\0';
-                    if(strcmp(buffer, STUDENT) == 0) {
+                    if((strcmp(buffer, STUDENT) == 0)) {
                         role[sizeof(STUDENT)] = STUDENT;
                         send(server_fd, buffer, strlen(buffer), 0);
+                        recv(server_fd, buffer, BUFFER_SIZE, 0);
+                        write(STDOUT, buffer, strlen(buffer));  
+                        if (buffer[0] == '+'){ 
+                            student_handler();
+                        }
                         memset(buffer, 0, BUFFER_SIZE);
-                        student_handler();
                     }
                     else if(strcmp(buffer, TA) == 0) {
                         role[sizeof(TA)] = TA;
                         send(server_fd, buffer, strlen(buffer), 0);
+                        recv(server_fd, buffer, BUFFER_SIZE, 0);
+                        write(STDOUT, buffer, strlen(buffer));  
+                        if (buffer[0] == '+'){ 
+                            TA_handler();
+                        }
                         memset(buffer, 0, BUFFER_SIZE);
-                        TA_handler();
                     }
                     else if (strcmp(buffer, ASK_QUESTION) == 0) {
                         ask_question(server_fd);
+                    }
+                    else if (strcmp(buffer, SHOW_LIST_QUESTIONS) == 0) {
+                        send(server_fd, buffer, strlen(buffer), 0);
+                        recv(server_fd, buffer, BUFFER_SIZE, 0);
+                        write(STDOUT, buffer, strlen(buffer));
+                        memset(buffer, 0, BUFFER_SIZE);
+                    }
+                    else {
+                        send(server_fd, buffer, strlen(buffer), 0);
+                        recv(server_fd, buffer, BUFFER_SIZE, 0);
+                        write(STDOUT, buffer, strlen(buffer));
+                        memset(buffer, 0, BUFFER_SIZE);
                     }
                 }
                 else if (i == server_fd) {
