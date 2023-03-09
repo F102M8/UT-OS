@@ -1,22 +1,5 @@
 #include "../include/const.h"
-
-int setup(int port) {
-    int fd, broadcast = 1, opt = 1;
-    char buffer[BUFFER_SIZE] = {0};
-    struct sockaddr_in bc_address;
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
-    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-
-    bc_address.sin_family = AF_INET; 
-    bc_address.sin_port = htons(port); 
-    bc_address.sin_addr.s_addr = inet_addr(BROADCAST_ADDR);
-
-    bind(fd, (struct sockaddr *)&bc_address, sizeof(bc_address));
-    
-
-    return fd;
-}
+char buffer[BUFFER_SIZE] = {0};
 
 int connect_to_server(int port) {
     struct sockaddr_in server_address;
@@ -54,12 +37,26 @@ void student_handler() {
 
 }
 
+void ask_question(int server_fd) {
+    send(server_fd, buffer, strlen(buffer), 0);
+    memset(buffer, 0, BUFFER_SIZE);
+    recv(server_fd, buffer, BUFFER_SIZE, 0);
+    write(STDOUT, buffer, strlen(buffer));
+    memset(buffer, 0, BUFFER_SIZE);
+    recv(server_fd, buffer, strlen(buffer), 0);
+    buffer[strlen(buffer) - 1] = '\0';
+    if (strcmp(buffer, ACCEPT) == 0) {
+        memset(buffer, 0, BUFFER_SIZE);
+        read(STDIN, buffer,BUFFER_SIZE);
+        send(server_fd, buffer, strlen(buffer),0);
+    }
+    memset(buffer, 0, BUFFER_SIZE);
+}
+
 int main(int argc, char const *argv) {
     //signal(SIGALRM, alarm_handler);
     //siginterrupt(SIGALRM, 1);
 
-    char buffer[BUFFER_SIZE] = {0};
-    
     if (argc <= 1) {
         const char message[] = "On default port...!\n";
         write(STDOUT, message, sizeof(message));
@@ -77,9 +74,9 @@ int main(int argc, char const *argv) {
     FD_SET(server_fd, &master_set); 
 
     welcome();
-    char role[] = '\0';
+    char role[ROLE_SIZE] = {0};
 
-    while(TRUE) {
+    while(true) {
         working_set = master_set;
         select(max_fd + 1, &working_set, NULL, NULL, NULL);
 
@@ -88,23 +85,25 @@ int main(int argc, char const *argv) {
                 if(i == STDIN) {
                     read(STDIN, buffer, BUFFER_SIZE);
                     buffer[strlen(buffer) - 1] = '\0';
-                    if(strcmp(buffer, TA) == 0) {
-                        role[sizeof(TA)] = TA;
-                        const char msg[] = "-ls : show list\n-ans\n";
-                        write(STDOUT, msg, sizeof(msg));
-                        send(server_fd, buffer, strlen(buffer), 0);
-                        memset(buffer, 0, BUFFER_SIZE);
-                    }
                     if(strcmp(buffer, STUDENT) == 0) {
                         role[sizeof(STUDENT)] = STUDENT;
                         send(server_fd, buffer, strlen(buffer), 0);
-                        send(server_fd, role, strlen(role), 1);
+                        memset(buffer, 0, BUFFER_SIZE);
+                        student_handler();
                     }
-                    
+                    else if(strcmp(buffer, TA) == 0) {
+                        role[sizeof(TA)] = TA;
+                        send(server_fd, buffer, strlen(buffer), 0);
+                        memset(buffer, 0, BUFFER_SIZE);
+                        TA_handler();
+                    }
+                    else if (strcmp(buffer, ASK_QUESTION) == 0) {
+                        ask_question(server_fd);
+                    }
                 }
                 else if (i == server_fd) {
                     recv(server_fd, buffer, BUFFER_SIZE, 0);
-                    write(1, buffer, strlen(buffer));
+                    write(STDOUT, buffer, strlen(buffer));
                     memset(buffer, 0, BUFFER_SIZE);
                 }
             }

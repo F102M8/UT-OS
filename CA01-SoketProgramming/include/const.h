@@ -9,6 +9,8 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <sys/ioctl.h>
+#include <stdbool.h>
+
 
 #define STDIN 0
 #define STDOUT 1
@@ -19,11 +21,13 @@
 #define MAX_CLIENT_IN_MEETING 50
 #define MEETINGS 25
 #define MAX_QUESTIONS 100
+#define MAX_TA 20
+#define MAX_STUDENT 30
 
 #define MAX_DELAY 60
 
-#define TRUE  1
-#define FALSE 0
+#define ACCEPT "accept"
+#define REJECT "reject"
 
 #define DEFAULT_PORT 8081
 
@@ -32,6 +36,7 @@
 
 #define STUDENT "set_S"
 #define TA "set_T"
+#define ROLE_SIZE 5
 
 #define ASK_QUESTION "ask"
 #define SHOW_MEETINGS "show_m"
