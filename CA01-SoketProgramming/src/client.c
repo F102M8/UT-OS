@@ -40,7 +40,8 @@ void welcome() {
     write(STDOUT, message, sizeof(message));
 }
 void TA_handler() {
-
+    const char message[] = "1. answer question        (type: ans)\n2. show list_questions    (type: ls)\n";
+    write(STDOUT, message, sizeof(message));
 }
 void student_handler() {
     const char message[] = "1. ask new question (type: ask)\n2. show meeting     (type: show_m)\n3. join to meeting  (type: join)\n";
@@ -59,6 +60,27 @@ void request_ans(int server_fd) {
     write(STDOUT, buffer, strlen(buffer)); 
     memset(buffer, 0, BUFFER_SIZE);
 }
+
+void meeting_handler() {
+
+}
+int conect_to_meeting(int port) {
+    int sock, broadcast = 1, opt = 1;
+    struct sockaddr_in bc_address;
+
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+
+    bc_address.sin_family = AF_INET; 
+    bc_address.sin_port = htons(port); 
+    bc_address.sin_addr.s_addr = inet_addr(NET_ADDRESS);
+
+    bind(sock, (struct sockaddr *)&bc_address, sizeof(bc_address));
+
+    return sock;
+}
+
 int main(int argc, char *argv[]) {
     //signal(SIGALRM, alarm_handler);
     //siginterrupt(SIGALRM, 1);
@@ -70,9 +92,7 @@ int main(int argc, char *argv[]) {
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
     
     int server_fd = connect_to_server(server_port);
-    //int port = recieve_port(port);
-    //int client_fd = setup(port);
-
+    int meeting_fd = -1;
 
     FD_ZERO(&master_set);
     int max_fd = server_fd;
@@ -132,8 +152,22 @@ int main(int argc, char *argv[]) {
                 }
                 else if (i == server_fd) {
                     recv(server_fd, buffer, BUFFER_SIZE, 0);
-                    write(STDOUT, buffer, strlen(buffer));
-                    memset(buffer, 0, BUFFER_SIZE);
+                    buffer[strlen(buffer)] = '\0';
+                    if (strcmp(buffer, REQ_CONNECT) == 0) {
+                        const char msg[] = "*** NEW MEETING FOR YOU ***\n";
+                        write(STDOUT, msg, sizeof(msg));
+                        memset(buffer, 0, BUFFER_SIZE);
+                        recv(server_fd, buffer, BUFFER_SIZE,0);
+                        write(STDOUT, msg, sizeof(msg));
+                        memset(buffer, 0, BUFFER_SIZE);
+                    }
+                    else {
+                        write(STDOUT, buffer, strlen(buffer));
+                        memset(buffer, 0, BUFFER_SIZE);
+                    }
+                }
+                else if (i == meeting_fd) {
+
                 }
             }
         }

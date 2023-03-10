@@ -33,8 +33,6 @@
 #define DEFAULT_PORT 8081
 
 #define NET_ADDRESS "127.0.0.1"
-#define BROADCAST_ADDR "192.168.1.255"
-#define NET_ADDR2 "255.255.255.255" 
 
 #define STUDENT "set_S"
 #define TA "set_T"
@@ -47,6 +45,7 @@
 #define ANSWER "ans"
 
 #define END "END_OF_LIST\n"
+#define REQ_CONNECT "req_connect_to_meeting\n"
 
 typedef enum
 {
@@ -54,3 +53,4 @@ typedef enum
     ANSWERED,
     UNDER_DISCUSSION,
 } Q_level;
+

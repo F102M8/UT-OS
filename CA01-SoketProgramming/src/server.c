@@ -12,6 +12,7 @@ char buffer[BUFFER_SIZE] = {0};
 fd_set master_set, working_set;
 fd_set student_set, TA_set;
 fd_set req_ask, req_join, req_ans;
+fd_set meetings_set;
 struct Question questions[MAX_QUESTIONS];
 int question_count = 0;
 
@@ -39,16 +40,30 @@ void set_questions_buff() {
     }
 }
 
-int create_port() {
-    while(true) {
-        int random_port= arc4random() % 9000 + 1000
-    }
+int create_port(int server_fd, int id) {
+    return (server_fd + id);
 }
-void add_to_meeting(int fd){
     
+void add_to_meeting(int fd){
+     
 } 
-void create_meeting() {
 
+int create_meeting(int port) {
+    int sock, broadcast = 1, opt = 1;
+    char buffer_m[BUFFER_SIZE] = {0};
+    struct sockaddr_in bc_address;
+
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+
+    bc_address.sin_family = AF_INET; 
+    bc_address.sin_port = htons(port); 
+    bc_address.sin_addr.s_addr = inet_addr(NET_ADDRESS);
+
+    bind(sock, (struct sockaddr *)&bc_address, sizeof(bc_address));
+    return sock;
+    
 }
 
 int setup_server(int port) {
@@ -172,7 +187,10 @@ void request_ans(int fd){
         }      
     }
 }
-void answer(int fd, int id) {
+void answer(int server_fd, int fd, char sid) {
+    //int id =  atoi(sid);
+    write(1, sid, sizeof(sid));
+    int id = 0;
     if(id < 0) {
         const char message[] = "- not found! - (id >= 0) \n";
         send(fd, message, sizeof(message), 0);
@@ -193,8 +211,14 @@ void answer(int fd, int id) {
         questions[id].status = UNDER_DISCUSSION;
         questions[id].fd_TA = fd;
         const char message[] = "+ OK \n";
-        send(fd, message, sizeof(message), 0);
-        create_meeting(id);
+        send(questions[id].fd_TA, message, sizeof(message), 0);
+        int port = create_port(server_fd, id);
+        int meeting_fd = create_meeting(port);
+        send(questions[id].fd_TA, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        send(questions[id].fd_TA, port, sizeof(port), 0);
+        
+        send(questions[id].fd_S, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        send(questions[id].fd_S, port, sizeof(port), 0);
     }
     FD_CLR(fd, &req_ans);
 }
@@ -304,7 +328,7 @@ int main(int argc,char const *argv[]) {
                             submit_question(i);
                         }
                         else if (FD_ISSET(i, &req_ans)) {
-                            answer(i, to_int(buffer));
+                            answer(server_fd, i, buffer);
                         }
                         else {
                             const char message[] = "sth went wrong! \n";
