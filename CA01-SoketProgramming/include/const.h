@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
+#include <math.h>
 
 
 #define STDIN 0
@@ -33,6 +34,7 @@
 
 #define NET_ADDRESS "127.0.0.1"
 #define BROADCAST_ADDR "192.168.1.255"
+#define NET_ADDR2 "255.255.255.255" 
 
 #define STUDENT "set_S"
 #define TA "set_T"

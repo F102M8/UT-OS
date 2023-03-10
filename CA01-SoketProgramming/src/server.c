@@ -14,6 +14,21 @@ fd_set req_ask, req_join, req_ans;
 struct Question questions[MAX_QUESTIONS];
 int question_count = 0;
 
+int to_int(char str[])
+{
+    int len = strlen(str);
+    int i, num = 0;
+    
+    for (i = len - 1; i < 0; i--) {
+        if (((str[len - (i + 1)] - '0') > 9) || ((str[len - (i + 1)] - '0') < 0))  {
+            return -1;
+        }
+        num = num * 10 + (str[len - (i + 1)] - '0') ;
+    }
+ 
+   return num;
+}
+
 void set_questions_buff() {
     for(int i = 0; i < MAX_QUESTIONS; i++) {
         questions[i].fd_S = -1;
@@ -22,6 +37,7 @@ void set_questions_buff() {
         questions[i].status = ANSWERED;
     }
 }
+
 
 int setup_server(int port) {
     struct sockaddr_in address;
@@ -35,7 +51,6 @@ int setup_server(int port) {
     address.sin_port = htons(port);
 
     bind(server_fd, (struct sockaddr *)&address, sizeof(address));
-    
     listen(server_fd, MAX_CONNECTION_TO_THE_SERVER);
 
     const char message[] ="Server is running...\nWaiting for clients...\n";
@@ -128,6 +143,46 @@ void show_ls_questions(int fd) {
     }
 }
 
+void request_ans(int fd){
+    if(FD_ISSET(fd, &TA_set)) {
+        const char message[] = "+ enter id:...\n";
+        send(fd, message, sizeof(message), 0);
+        FD_SET(fd, &req_ans);
+    }
+    else {
+         if(FD_ISSET(fd, &student_set)) {
+            const char message[] = "- Do not have permission! \n";
+            send(fd, message, sizeof(message), 0);
+        }
+        else {
+            const char message[] = "- First set your role! \n";
+            send(fd, message, sizeof(message), 0);
+        }      
+    }
+}
+void answer(int fd, int id) {
+    if(id < 0) {
+        const char message[] = "- not found! - (id >= 0) \n";
+        send(fd, message, sizeof(message), 0);
+    }
+    else if(id > question_count) {
+        const char message[] = "- not found! \n";
+        send(fd, message, sizeof(message), 0);
+    }
+    else if(questions[id].status == UNDER_DISCUSSION) {
+        const char message[] = "- under discussion! \n";
+        send(fd, message, sizeof(message), 0);
+    }
+    else if(questions[id].status == ANSWERED) {
+        const char message[] = "- already answered! \n";
+        send(fd, message, sizeof(message), 0);
+    }
+    else {
+        questions[id].status = UNDER_DISCUSSION;
+        const char message[] = "+ OK \n";
+        send(fd, message, sizeof(message), 0);
+    }
+}
 
 int main(int argc,char const *argv[]) {
     if (argc <= 1) {
@@ -223,15 +278,21 @@ int main(int argc,char const *argv[]) {
                     else if(strcmp(buffer, SHOW_LIST_QUESTIONS) == 0) {
                         show_ls_questions(i);
                     }
+                    else if(strcmp(buffer, ANSWER) == 0) {
+                        request_ans(i);
+                    }
                     else {
                         if(FD_ISSET(i, &req_ask)) {
                             submit_question(i);
                         }
-                        
+                        else if (FD_ISSET(i, &req_ans)) {
+                            answer(i, to_int(buffer));
+                        }
                         else {
                             const char message[] = "sth went wrong! \n";
                             send(i, message, sizeof(message), 0);
                         }
+                        
                     }
                 }
                     memset(buffer, 0, BUFFER_SIZE);

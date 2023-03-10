@@ -4,10 +4,15 @@ char buffer[BUFFER_SIZE] = {0};
 fd_set master_set, working_set;
 
 char role[ROLE_SIZE] = {0};
+
 int connect_to_server(int port) {
-    struct sockaddr_in server_address;
+    struct sockaddr_in server_address, bc_address;
     int fd = socket(AF_INET, SOCK_STREAM, 0);
-   
+    int opt = 1, broadcast = 1;
+    
+    setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+
     server_address.sin_family = AF_INET; 
     server_address.sin_port = htons(port); 
     server_address.sin_addr.s_addr = inet_addr(NET_ADDRESS);
@@ -15,11 +20,13 @@ int connect_to_server(int port) {
     const char error[] = "Error in connecting\n";
     if (connect(fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0){
         write(STDERR, error, sizeof(error));
+        abort();
     }
     else  { 
         const char message[] = "connected to the server!\n";
         write(STDOUT, message, sizeof(message));
     }
+    
     return fd;
 }
 
@@ -47,15 +54,16 @@ void ask_question(int server_fd) {
     memset(buffer, 0, BUFFER_SIZE);
 }
 
-int main(int argc, char const *argv) {
+int main(int argc, char *argv[]) {
     //signal(SIGALRM, alarm_handler);
     //siginterrupt(SIGALRM, 1);
-
+    
     if (argc <= 1) {
         const char message[] = "on default port...!\n";
         write(STDOUT, message, sizeof(message));
     }
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
+    
     int server_fd = connect_to_server(server_port);
     //int port = recieve_port(port);
     //int client_fd = setup(port);
@@ -106,6 +114,9 @@ int main(int argc, char const *argv) {
                         recv(server_fd, buffer, BUFFER_SIZE, 0);
                         write(STDOUT, buffer, strlen(buffer)); 
                         memset(buffer, 0, BUFFER_SIZE);
+                    }
+                    else if (strcmp(buffer, ANSWER)) {
+
                     }
                     else {
                         send(server_fd, buffer, strlen(buffer), 0);
