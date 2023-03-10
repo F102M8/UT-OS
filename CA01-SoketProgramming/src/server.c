@@ -3,6 +3,7 @@ struct Question {
     char Q_text[BUFFER_SIZE];
     Q_level status;
     int meeting_port;
+    int fd_meeting;
     int fd_S;
     int fd_TA;
 };
@@ -38,6 +39,17 @@ void set_questions_buff() {
     }
 }
 
+int create_port() {
+    while(true) {
+        int random_port= arc4random() % 9000 + 1000
+    }
+}
+void add_to_meeting(int fd){
+    
+} 
+void create_meeting() {
+
+}
 
 int setup_server(int port) {
     struct sockaddr_in address;
@@ -179,9 +191,12 @@ void answer(int fd, int id) {
     }
     else {
         questions[id].status = UNDER_DISCUSSION;
+        questions[id].fd_TA = fd;
         const char message[] = "+ OK \n";
         send(fd, message, sizeof(message), 0);
+        create_meeting(id);
     }
+    FD_CLR(fd, &req_ans);
 }
 
 int main(int argc,char const *argv[]) {
@@ -236,6 +251,9 @@ int main(int argc,char const *argv[]) {
                         else if (FD_ISSET(i, &student_set)) {
                             FD_CLR(i, &student_set);
                         }
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         continue;
                     }
                     char message[BUFFER_SIZE] = {0};

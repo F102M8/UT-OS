@@ -53,7 +53,12 @@ void ask_question(int server_fd) {
     write(STDOUT, buffer, strlen(buffer)); 
     memset(buffer, 0, BUFFER_SIZE);
 }
-
+void request_ans(int server_fd) {
+    send(server_fd, buffer, strlen(buffer), 0);
+    recv(server_fd, buffer, BUFFER_SIZE, 0);
+    write(STDOUT, buffer, strlen(buffer)); 
+    memset(buffer, 0, BUFFER_SIZE);
+}
 int main(int argc, char *argv[]) {
     //signal(SIGALRM, alarm_handler);
     //siginterrupt(SIGALRM, 1);
@@ -115,8 +120,8 @@ int main(int argc, char *argv[]) {
                         write(STDOUT, buffer, strlen(buffer)); 
                         memset(buffer, 0, BUFFER_SIZE);
                     }
-                    else if (strcmp(buffer, ANSWER)) {
-
+                    else if (strcmp(buffer, ANSWER) == 0) {
+                        request_ans(server_fd);
                     }
                     else {
                         send(server_fd, buffer, strlen(buffer), 0);
