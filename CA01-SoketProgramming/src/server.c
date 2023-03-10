@@ -87,7 +87,7 @@ void submit_question(int fd) {
     const char message[] = "+ new question added successfully!\n";
     questions[question_count].fd_S = fd;
     strncpy(questions[question_count].Q_text, buffer, strlen(buffer));
-    questions[question_count].Q_text[strlen(buffer) - 1] = '\0';
+    //questions[question_count].Q_text[strlen(buffer) - 1] = '\0';
     questions[question_count].status = WAITING;
     write(STDOUT, message, sizeof(message));
     send(fd, message, sizeof(message), 0);
@@ -96,22 +96,25 @@ void submit_question(int fd) {
 }
 void show_ls_questions(int fd) {
     if(FD_ISSET(fd, &TA_set)) {
-        char text[] = "LIST: \n";
-        char temp[] = {0};
+        memset(buffer, 0, BUFFER_SIZE);
+        char text[BUFFER_SIZE] = {0};
+        sprintf(text, "LIST: \n");
+        strcat(buffer, text);
+        memset(text, 0, BUFFER_SIZE);
         for(int i = 0; i < question_count; i++) {
             if(questions[i].status == WAITING) {
-                memset(temp, 0, 5);
-                sprintf(temp, "- %d :", i);
-                strcat(text, temp);
-                memset(temp, 0, strlen(questions[i].Q_text));
-                strcpy(temp, questions[i].Q_text);
-                strcat(text, temp);
-                strcat(text, "\n");
+                sprintf(text, "id: %d - %s\n", i, questions[i].Q_text);
+                strcat(buffer, text);
+                memset(text, 0, BUFFER_SIZE);   
             }
         }
-        strcat(text, END);
-        write(STDOUT, text, strlen(text));
-        send(fd, text, sizeof(text), 0);
+        sprintf(text, END);
+        strcat(buffer, text);
+        memset(text, 0, BUFFER_SIZE);
+        buffer[strlen(buffer)] = '\0';
+        send(fd, buffer, BUFFER_SIZE, 0);
+
+        memset(buffer, 0, BUFFER_SIZE);
     }
     else {
         if(FD_ISSET(fd, &student_set)) {
@@ -224,8 +227,9 @@ int main(int argc,char const *argv[]) {
                         if(FD_ISSET(i, &req_ask)) {
                             submit_question(i);
                         }
+                        
                         else {
-                            const char message[] = "Sth went wrong! \n";
+                            const char message[] = "sth went wrong! \n";
                             send(i, message, sizeof(message), 0);
                         }
                     }

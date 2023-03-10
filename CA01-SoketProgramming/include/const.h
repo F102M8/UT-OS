@@ -44,7 +44,7 @@
 #define SHOW_LIST_QUESTIONS "ls"
 #define ANSWER "ans"
 
-#define END "_END_\n"
+#define END "END_OF_LIST\n"
 
 typedef enum
 {
