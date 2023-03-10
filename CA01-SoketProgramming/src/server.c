@@ -1,6 +1,6 @@
 #include "../include/const.h"
 struct Question {
-    char Q_text;
+    char Q_text[BUFFER_SIZE];
     Q_level status;
     int meeting_port;
     int fd_S;
@@ -14,6 +14,14 @@ fd_set req_ask, req_join, req_ans;
 struct Question questions[MAX_QUESTIONS];
 int question_count = 0;
 
+void set_questions_buff() {
+    for(int i = 0; i < MAX_QUESTIONS; i++) {
+        questions[i].fd_S = -1;
+        questions[i].fd_TA = -1;
+        questions[i].meeting_port = -1;
+        questions[i].status = ANSWERED;
+    }
+}
 
 int setup_server(int port) {
     struct sockaddr_in address;
@@ -78,21 +86,32 @@ void request_ask(int fd) {
 void submit_question(int fd) {
     const char message[] = "+ new question added successfully!\n";
     questions[question_count].fd_S = fd;
-    questions[question_count].Q_text = buffer;
+    strncpy(questions[question_count].Q_text, buffer, strlen(buffer));
+    questions[question_count].Q_text[strlen(buffer) - 1] = '\0';
     questions[question_count].status = WAITING;
     write(STDOUT, message, sizeof(message));
     send(fd, message, sizeof(message), 0);
     FD_CLR(fd, &req_ask);
+    question_count ++;
 }
 void show_ls_questions(int fd) {
     if(FD_ISSET(fd, &TA_set)) {
+        char text[] = "LIST: \n";
+        char temp[] = {0};
         for(int i = 0; i < question_count; i++) {
             if(questions[i].status == WAITING) {
-                char text;
-                sprintf(text, "%s \n",  questions[i].Q_text);
-                write(STDOUT, text, sizeof(text));
+                memset(temp, 0, 5);
+                sprintf(temp, "- %d :", i);
+                strcat(text, temp);
+                memset(temp, 0, strlen(questions[i].Q_text));
+                strcpy(temp, questions[i].Q_text);
+                strcat(text, temp);
+                strcat(text, "\n");
             }
         }
+        strcat(text, END);
+        write(STDOUT, text, strlen(text));
+        send(fd, text, sizeof(text), 0);
     }
     else {
         if(FD_ISSET(fd, &student_set)) {
@@ -105,6 +124,7 @@ void show_ls_questions(int fd) {
         }
     }
 }
+
 
 int main(int argc,char const *argv[]) {
     if (argc <= 1) {
@@ -124,6 +144,7 @@ int main(int argc,char const *argv[]) {
     int max_fd = server_fd;
     //FD_SET(STDIN, &master_set);
     FD_SET(server_fd, &master_set);   
+    set_questions_buff();
 
     int new_client_fd;
 

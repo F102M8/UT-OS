@@ -44,6 +44,8 @@
 #define SHOW_LIST_QUESTIONS "ls"
 #define ANSWER "ans"
 
+#define END "_END_\n"
+
 typedef enum
 {
     WAITING,

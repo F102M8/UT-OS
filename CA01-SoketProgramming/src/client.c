@@ -102,8 +102,8 @@ int main(int argc, char const *argv) {
                     }
                     else if (strcmp(buffer, SHOW_LIST_QUESTIONS) == 0) {
                         send(server_fd, buffer, strlen(buffer), 0);
+                        memset(buffer, 0, BUFFER_SIZE);
                         recv(server_fd, buffer, BUFFER_SIZE, 0);
-                        write(STDOUT, buffer, strlen(buffer));
                         memset(buffer, 0, BUFFER_SIZE);
                     }
                     else {
