@@ -92,7 +92,8 @@ int main(int argc, char *argv[]) {
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
     
     int server_fd = connect_to_server(server_port);
-    int meeting_port = -1;
+    int meeting_fd = 1;
+    int meeting_port = 999;
 
     FD_ZERO(&master_set);
     int max_fd = server_fd;
@@ -154,14 +155,25 @@ int main(int argc, char *argv[]) {
                     recv(server_fd, buffer, BUFFER_SIZE, 0);
                     buffer[strlen(buffer)] = '\0';
                     if (strcmp(buffer, REQ_CONNECT) == 0) {
-                        const char msg[] = "*** NEW MEETING FOR YOU ***\n";
-                        write(STDOUT, msg, sizeof(msg));
-                        
+                        //const char msg[] = "*** NEW MEETING FOR YOU ***\n";
+                        //(buffer, 0, BUFFER_SIZE); 
+                        //send(server_fd, ACCEPT,sizeof(ACCEPT), 0);
                         recv(server_fd, buffer, BUFFER_SIZE,0);
-                        meeting_port = atoi(buffer);
+                        buffer[strlen(buffer) - 1] = '\0';
+                        //meeting_port = atoi(buffer);
+                        
+                        
+                        meeting_port = to_int(buffer);
                         write(STDOUT, buffer, sizeof(buffer));
+                        //char s_port[BUFFER_SIZE] = {0};
+                        //strncpy(s_port, buffer, sizeof(buffer));
+                        
+                        //write(STDOUT, s_port, sizeof(s_port));
+                        //meeting_port = atoi(s_port);
+                        char msg[BUFFER_SIZE] = {0};
+                        sprintf(msg, "*** NEW MEETING FOR YOU ***\nport: %d\n***you added to meeting!***\n ", meeting_port);
+                        write(STDOUT, msg, sizeof(msg));
                         memset(buffer, 0, BUFFER_SIZE);
-
                     }
                     else {
                         write(STDOUT, buffer, strlen(buffer));

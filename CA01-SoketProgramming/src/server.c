@@ -205,8 +205,6 @@ void request_ans(int fd){
 }
 void answer(int server_port, int fd, char sid[]) {
     int id = atoi(sid);
-
-    
     if(id < 0) {
         const char message[] = "- not found! - (id >= 0) \n";
         send(fd, message, sizeof(message), 0);
@@ -236,8 +234,11 @@ void answer(int server_port, int fd, char sid[]) {
         snprintf (s_port, BUFFER_SIZE, "%d",port);
         
         send(questions[id].fd_TA, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        //recv(questions[id].fd_TA,buffer, BUFFER_SIZE, 0);
         send(questions[id].fd_TA, s_port, sizeof(s_port), 0);
+        
         send(questions[id].fd_S, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        //recv(questions[id].fd_S, buffer, BUFFER_SIZE, 0);
         send(questions[id].fd_S, s_port, sizeof(s_port), 0);
 
     }
