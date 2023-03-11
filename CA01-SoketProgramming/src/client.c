@@ -2,8 +2,8 @@
 
 char buffer[BUFFER_SIZE] = {0};
 fd_set master_set, working_set;
-
 char role[ROLE_SIZE] = {0};
+
 
 int connect_to_server(int port) {
     struct sockaddr_in server_address, bc_address;
@@ -61,6 +61,9 @@ void request_ans(int server_fd) {
     memset(buffer, 0, BUFFER_SIZE);
 }
 
+int create_port(int server_port, int id) {
+    return (server_port + id + 1);
+}
 void meeting_handler() {
 
 }
@@ -80,7 +83,11 @@ int conect_to_meeting(int port) {
 
     return sock;
 }
-
+void broadcat(int meeting_fd) {
+    //signal(SIGALRM, alarm_handler);
+    //siginterrupt(SIGALRM, 1);
+    
+}
 int main(int argc, char *argv[]) {
     //signal(SIGALRM, alarm_handler);
     //siginterrupt(SIGALRM, 1);
@@ -154,26 +161,18 @@ int main(int argc, char *argv[]) {
                 else if (i == server_fd) {
                     recv(server_fd, buffer, BUFFER_SIZE, 0);
                     buffer[strlen(buffer)] = '\0';
-                    if (strcmp(buffer, REQ_CONNECT) == 0) {
-                        //const char msg[] = "*** NEW MEETING FOR YOU ***\n";
-                        //(buffer, 0, BUFFER_SIZE); 
-                        //send(server_fd, ACCEPT,sizeof(ACCEPT), 0);
+                    char commit[BUFFER_SIZE] = {0};
+                    strncpy(commit, buffer, strlen(buffer));
+                    memset(buffer, 0, BUFFER_SIZE);
+                    if (strcmp(commit, REQ_CONNECT) == 0) {
                         recv(server_fd, buffer, BUFFER_SIZE,0);
-                        buffer[strlen(buffer) - 1] = '\0';
-                        //meeting_port = atoi(buffer);
-                        
-                        
-                        meeting_port = to_int(buffer);
-                        write(STDOUT, buffer, sizeof(buffer));
-                        //char s_port[BUFFER_SIZE] = {0};
-                        //strncpy(s_port, buffer, sizeof(buffer));
-                        
-                        //write(STDOUT, s_port, sizeof(s_port));
-                        //meeting_port = atoi(s_port);
+                        buffer[strlen(buffer)] = '\0';
+                        meeting_port = atoi(buffer);
                         char msg[BUFFER_SIZE] = {0};
                         sprintf(msg, "*** NEW MEETING FOR YOU ***\nport: %d\n***you added to meeting!***\n ", meeting_port);
                         write(STDOUT, msg, sizeof(msg));
                         memset(buffer, 0, BUFFER_SIZE);
+                        meeting_fd = conect_to_meeting(meeting_port);
                     }
                     else {
                         write(STDOUT, buffer, strlen(buffer));

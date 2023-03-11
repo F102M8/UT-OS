@@ -59,11 +59,11 @@ void set_questions_buff() {
 int create_port(int server_port, int id) {
     return (server_port + id + 1);
 }
-    
+
+   
 void add_to_meeting(int fd){
      
 } 
-
 int create_meeting(int port) {
     int sock, broadcast = 1, opt = 1;
     char buffer_m[BUFFER_SIZE] = {0};
@@ -204,6 +204,7 @@ void request_ans(int fd){
     }
 }
 void answer(int server_port, int fd, char sid[]) {
+    
     int id = atoi(sid);
     if(id < 0) {
         const char message[] = "- not found! - (id >= 0) \n";
@@ -227,20 +228,15 @@ void answer(int server_port, int fd, char sid[]) {
         const char message[] = "+ OK \n";
         send(questions[id].fd_TA, message, sizeof(message), 0);
         int port = create_port(server_port, id);
-
-        int meeting_fd = create_meeting(port);
         char s_port[BUFFER_SIZE] = {0};
-
         snprintf (s_port, BUFFER_SIZE, "%d",port);
-        
-        send(questions[id].fd_TA, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
-        //recv(questions[id].fd_TA,buffer, BUFFER_SIZE, 0);
-        send(questions[id].fd_TA, s_port, sizeof(s_port), 0);
-        
-        send(questions[id].fd_S, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
-        //recv(questions[id].fd_S, buffer, BUFFER_SIZE, 0);
-        send(questions[id].fd_S, s_port, sizeof(s_port), 0);
+        int meeting_fd = create_meeting(port);
 
+        send(questions[id].fd_TA, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        send(questions[id].fd_S, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        send(questions[id].fd_TA, s_port, BUFFER_SIZE, 0);
+        send(questions[id].fd_S, s_port, BUFFER_SIZE, 0);
+        FD_SET(meeting_fd, &meetings_set);
     }
     FD_CLR(fd, &req_ans);
 }

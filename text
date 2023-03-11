@@ -1,2 +1,19 @@
 server: 191 - 193
-client: 160 -163
+client: 160 -163               
+//const char msg[] = "*** NEW MEETING FOR YOU ***\n";
+                        memset(buffer, 0, BUFFER_SIZE); 
+                        //send(server_fd, ACCEPT,sizeof(ACCEPT), 0);
+                        recv(server_fd, buffer, BUFFER_SIZE,0);
+                        buffer[strlen(buffer) - 1] = '\0';
+                        int id = atoi(buffer);
+                        //meeting_port = create_port(server_port, id);
+                        write(STDOUT, buffer, sizeof(buffer));
+                        //char s_port[BUFFER_SIZE] = {0};
+                        //strncpy(s_port, buffer, sizeof(buffer));
+                        
+                        //write(STDOUT, s_port, sizeof(s_port));
+                        //meeting_port = atoi(s_port);
+                        char msg[BUFFER_SIZE] = {0};
+                        sprintf(msg, "*** NEW MEETING FOR YOU ***\nport: %d\n***you added to meeting!***\n ", meeting_port);
+                        write(STDOUT, msg, sizeof(msg));
+                        memset(buffer, 0, BUFFER_SIZE);
