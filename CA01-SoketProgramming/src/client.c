@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
     
     int server_fd = connect_to_server(server_port);
-    int meeting_fd = -1;
+    int meeting_port = -1;
 
     FD_ZERO(&master_set);
     int max_fd = server_fd;
@@ -156,10 +156,12 @@ int main(int argc, char *argv[]) {
                     if (strcmp(buffer, REQ_CONNECT) == 0) {
                         const char msg[] = "*** NEW MEETING FOR YOU ***\n";
                         write(STDOUT, msg, sizeof(msg));
-                        memset(buffer, 0, BUFFER_SIZE);
+                        
                         recv(server_fd, buffer, BUFFER_SIZE,0);
-                        write(STDOUT, msg, sizeof(msg));
+                        meeting_port = atoi(buffer);
+                        write(STDOUT, buffer, sizeof(buffer));
                         memset(buffer, 0, BUFFER_SIZE);
+
                     }
                     else {
                         write(STDOUT, buffer, strlen(buffer));

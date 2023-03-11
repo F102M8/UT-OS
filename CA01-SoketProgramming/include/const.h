@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <math.h>
+#include <string.h>
 
 
 #define STDIN 0
