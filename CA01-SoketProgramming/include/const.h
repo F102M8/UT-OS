@@ -28,8 +28,8 @@
 
 #define MAX_DELAY 60
 
-#define ACCEPT "accept"
-#define REJECT "reject"
+#define ACCEPT "accepted! \n"
+#define REJECT "rejected! \n"
 
 #define DEFAULT_PORT 8081
 

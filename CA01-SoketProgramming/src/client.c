@@ -2,6 +2,7 @@
 
 char buffer[BUFFER_SIZE] = {0};
 fd_set master_set, working_set;
+
 bool on_meeting;
 
 int connect_to_server(int port)
@@ -175,7 +176,12 @@ int main(int argc, char *argv[]) {
                     }
                     else if (strcmp(buffer, ASK_QUESTION) == 0)
                     {
-                        ask_question(server_fd);
+                        if (!on_meeting) {
+                            ask_question(server_fd);
+                        }
+                        else {
+                            write(STDOUT, "- Do not have permission! \n", sizeof("- Do not have permission! \n"));
+                        }
                     }
                     else if (strcmp(buffer, SHOW_LIST_QUESTIONS) == 0)
                     {
@@ -185,9 +191,36 @@ int main(int argc, char *argv[]) {
                         write(STDOUT, buffer, strlen(buffer));
                         memset(buffer, 0, BUFFER_SIZE);
                     }
-                    else if (strcmp(buffer, ANSWER) == 0)
-                    {
-                        request_ans(server_fd);
+                    else if (strcmp(buffer, ANSWER) == 0) {
+                        if (!on_meeting) {
+                            request_ans(server_fd);
+                        }
+                        else {
+                            write(STDOUT, "- Do not have permission! \n", sizeof("- Do not have permission! \n"));
+                        }
+                    }
+                    else if (strcmp(buffer, SHOW_LIST_QUESTIONS) == 0) {
+                        send(server_fd, buffer, strlen(buffer), 0);
+                        memset(buffer, 0, BUFFER_SIZE);
+                        recv(server_fd, buffer, BUFFER_SIZE, 0);
+                        write(STDOUT, buffer, strlen(buffer));
+                        memset(buffer, 0, BUFFER_SIZE); 
+                    }
+                    else if (strcmp(buffer, JOIN_MEETING) == 0) {
+                        if(!on_meeting) {
+                            send(server_fd, buffer, strlen(buffer), 0);
+                            memset(buffer, 0, BUFFER_SIZE);
+                            recv(server_fd, buffer, BUFFER_SIZE, 0);
+                            write(STDOUT, buffer, strlen(buffer));
+                            memset(buffer, 0, BUFFER_SIZE); 
+                            recv(server_fd, buffer, BUFFER_SIZE, 0);
+                            write(STDOUT, buffer, strlen(buffer));
+                            memset(buffer, 0, BUFFER_SIZE); 
+                            on_meeting = true;
+                        }
+                        else {
+                            write(STDOUT, "- Do not have permission! \n", sizeof("- Do not have permission! \n"));
+                        }
                     }
                     else
                     {
@@ -203,8 +236,7 @@ int main(int argc, char *argv[]) {
                     char commit[BUFFER_SIZE] = {0};
                     strncpy(commit, buffer, strlen(buffer));
                     memset(buffer, 0, BUFFER_SIZE);
-                    if (strcmp(commit, REQ_CONNECT) == 0)
-                    {
+                    if (strcmp(commit, REQ_CONNECT) == 0) {
                         send(server_fd, ACCEPT, strlen(ACCEPT), 0);
                         recv(server_fd, buffer, BUFFER_SIZE, 0);
                         buffer[strlen(buffer)] = '\0';
@@ -231,6 +263,7 @@ int main(int argc, char *argv[]) {
 
                         bind(meeting_fd, (struct sockaddr *)&bc_address, sizeof(bc_address));
                         FD_SET(meeting_fd, &master_set);
+                       
                         if (meeting_fd > max_fd)
                             max_fd = meeting_fd;
                         char msg2[BUFFER_SIZE] = {0};
@@ -238,9 +271,10 @@ int main(int argc, char *argv[]) {
                         write(STDOUT, msg2, sizeof(msg2));
                         if(status == T)  
                             sendto(meeting_fd, "HI2\n\n", strlen("HI2\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
-
+                        on_meeting = true;
                        
                     }
+                    
                     else
                     {
                         write(STDOUT, buffer, strlen(buffer));

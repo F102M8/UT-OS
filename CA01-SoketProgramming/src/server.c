@@ -62,8 +62,26 @@ int create_port(int server_port, int id) {
 }
 
 
-void add_to_meeting(int fd){
-     
+void add_to_meeting(int fd, char sport[]) {
+    bool find_port = false;
+    int port = atoi(sport);
+    for(int i = 0; i < question_count; i++) {
+        if((questions[i].status == UNDER_DISCUSSION) && questions[i].meeting_port == port) {
+              find_port = true;
+        }
+    }
+    if (find_port) {
+        send(fd, ACCEPT, sizeof(ACCEPT),0);
+        send(fd, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        recv(fd, buffer, buffer, 0);
+        memset(buffer, 0, BUFFER_SIZE);
+        char s_port[BUFFER_SIZE] = {0};
+        snprintf (s_port, BUFFER_SIZE, "%d",port);
+        send(fd, s_port, BUFFER_SIZE, 0);
+    }
+    else {
+        send(fd, REJECT, sizeof(REJECT), 0);
+    }
 } 
 int create_meeting(int port) {
     int sock, broadcast = 1, opt = 1;
@@ -187,6 +205,57 @@ void show_ls_questions(int fd) {
     }
 }
 
+void show_ls_meetings(int fd) {
+    if(FD_ISSET(fd, &student_set)) {
+        memset(buffer, 0, BUFFER_SIZE);
+        char text[BUFFER_SIZE] = {0};
+        sprintf(text, "LIST: \n");
+        strcat(buffer, text);
+        memset(text, 0, BUFFER_SIZE);
+        for(int i = 0; i < question_count; i++) {
+            if(questions[i].status == UNDER_DISCUSSION) {
+                sprintf(text, "question id: %d - %s - on port: %d \n", i, questions[i].Q_text, questions[i].meeting_port);
+                strcat(buffer, text);
+                memset(text, 0, BUFFER_SIZE); 
+            }
+        }
+        sprintf(text, END);
+        strcat(buffer, text);
+        memset(text, 0, BUFFER_SIZE);
+        buffer[strlen(buffer)] = '\0';
+        send(fd, buffer, BUFFER_SIZE, 0);
+        memset(buffer, 0, BUFFER_SIZE);
+    }
+    else {
+        if(FD_ISSET(fd, &TA_set)) {
+            const char message[] = "- why?! \n";
+            send(fd, message, sizeof(message), 0);
+        }
+        else {
+            const char message[] = "- First set your role! \n";
+            send(fd, message, sizeof(message), 0);
+        }
+    }
+}
+void req_add_to_meeting(int fd) {
+    if(FD_ISSET(fd, &student_set)) {
+        show_ls_meetings(fd);
+        const char message[] = "+ Enter port...\n";
+        send(fd, message, sizeof(message), 0);
+        FD_SET(fd, &req_join);
+    }
+    else {
+        if(FD_ISSET(fd, &TA_set)) {
+            const char message[] = "- There is another TA!!!!\n";
+            send(fd, message, sizeof(message), 0);
+        }
+        else {
+            const char message[] = "- First set your role! \n";
+            send(fd, message, sizeof(message), 0);
+        }
+    }
+}
+
 void request_ans(int fd){
     if(FD_ISSET(fd, &TA_set)) {
         const char message[] = "+ enter id:...\n";
@@ -220,7 +289,11 @@ void answer(int server_port, int fd, char sid[]) {
         send(fd, message, sizeof(message), 0);
     }
     else if(questions[id].status == ANSWERED) {
-        const char message[] = "- already answered! \n";
+        const char message[] = "- Already answered! \n";
+        send(fd, message, sizeof(message), 0);
+    }
+    else if(FD_ISSET(questions[id].fd_S, &on_meeting_set)) {
+        const char message[] = "- Student is bussy for now, pls answer another question \n";
         send(fd, message, sizeof(message), 0);
     }
     else {
@@ -350,12 +423,21 @@ int main(int argc,char const *argv[]) {
                     else if(strcmp(buffer, ANSWER) == 0) {
                         request_ans(i);
                     }
+                    else if(strcmp(buffer, SHOW_MEETINGS) == 0) {
+                        show_ls_meetings(i);
+                    }
+                    else if(strcmp(buffer, JOIN_MEETING) == 0) {
+                        req_add_to_meeting(i);
+                    }
                     else {
                         if(FD_ISSET(i, &req_ask)) {
                             submit_question(i);
                         }
                         else if (FD_ISSET(i, &req_ans)) {
                             answer(server_port, i, buffer);
+                        }
+                        else if (FD_ISSET(i, &req_join)) {
+                            add_to_meeting(i, buffer);
                         }
                         else {
                             const char message[] = "sth went wrong! \n";
