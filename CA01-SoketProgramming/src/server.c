@@ -13,6 +13,7 @@ fd_set master_set, working_set;
 fd_set student_set, TA_set;
 fd_set req_ask, req_join, req_ans;
 fd_set meetings_set;
+fd_set on_meeting_set;
 struct Question questions[MAX_QUESTIONS];
 int question_count = 0;
 
@@ -60,7 +61,7 @@ int create_port(int server_port, int id) {
     return (server_port + id + 1);
 }
 
-   
+
 void add_to_meeting(int fd){
      
 } 
@@ -210,7 +211,7 @@ void answer(int server_port, int fd, char sid[]) {
         const char message[] = "- not found! - (id >= 0) \n";
         send(fd, message, sizeof(message), 0);
     }
-    else if(id > question_count) {
+    else if(id > question_count - 1) {
         const char message[] = "- not found! \n";
         send(fd, message, sizeof(message), 0);
     }
@@ -231,12 +232,19 @@ void answer(int server_port, int fd, char sid[]) {
         char s_port[BUFFER_SIZE] = {0};
         snprintf (s_port, BUFFER_SIZE, "%d",port);
         int meeting_fd = create_meeting(port);
+        questions[id].meeting_port = port;
 
         send(questions[id].fd_TA, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
-        send(questions[id].fd_S, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        recv(questions[id].fd_TA, buffer, buffer, 0);
+        memset(buffer, 0, BUFFER_SIZE);
         send(questions[id].fd_TA, s_port, BUFFER_SIZE, 0);
+        send(questions[id].fd_S, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
+        recv(questions[id].fd_S, buffer, buffer, 0);
+        memset(buffer, 0, BUFFER_SIZE);
         send(questions[id].fd_S, s_port, BUFFER_SIZE, 0);
         FD_SET(meeting_fd, &meetings_set);
+        FD_SET(questions[id].fd_S, &on_meeting_set);
+        FD_SET(questions[id].fd_TA, &on_meeting_set);
     }
     FD_CLR(fd, &req_ans);
 }
@@ -279,6 +287,7 @@ int main(int argc,char const *argv[]) {
                     write( STDOUT, message, sizeof(message));
                 }
                 else {
+
                     memset(buffer, 0, BUFFER_SIZE);
                     int bytes_received = recv(i, buffer, BUFFER_SIZE, 0);
                     if (bytes_received == 0) { 

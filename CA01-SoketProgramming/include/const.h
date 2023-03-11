@@ -34,7 +34,7 @@
 #define DEFAULT_PORT 8081
 
 #define NET_ADDRESS "127.0.0.1"
-
+#define BR_ADDR "255.255.255.255"
 #define STUDENT "set_S"
 #define TA "set_T"
 #define ROLE_SIZE 5
@@ -55,3 +55,9 @@ typedef enum
     UNDER_DISCUSSION,
 } Q_level;
 
+typedef enum
+{
+    T,
+    N,
+    S,
+} STATUS;
