@@ -94,7 +94,7 @@ void req_add_to_meeting(int fd) {
     }
     else {
         if(FD_ISSET(fd, &TA_set)) {
-            const char message[] = "- There is another TA!!!!\n";
+        const char message[] = "- Why? create your own meeting and answer another question! \n";
             send(fd, message, sizeof(message), 0);
         }
         else {
@@ -386,7 +386,7 @@ int main(int argc,char const *argv[]) {
                         FD_CLR(i, &req_join);
                         FD_CLR(i, &on_meeting_set);
                         for(int j = 0; j < question_count; j++) {
-                            if(questions[j].fd_S == i) {
+                            if((questions[j].fd_S == i) && (questions[j].status == WAITING)  ){
                                 questions[j].status = NO_NEED;
                             }
                         }
@@ -467,14 +467,8 @@ int main(int argc,char const *argv[]) {
                         for(int j = 0; j < question_count; j++) {
                             if(questions[j].fd_TA == i) {
                                 questions[j].fd_TA = -1;
-                            }
-                        }
-                    }
-                    else if(strcmp(buffer, NO_ANSWER) == 0) {
-                        FD_CLR(i, &on_meeting_set);
-                        for(int j = 0; j < question_count; j++) {
-                            if(questions[j].fd_S == i) {
                                 questions[j].status = WAITING;
+                                FD_CLR(questions[j].fd_S, &on_meeting_set);
                             }
                         }
                     }
@@ -483,8 +477,11 @@ int main(int argc,char const *argv[]) {
                         for(int j = 0; j < question_count; j++) {
                             if(questions[j].fd_TA == i) {
                                 questions[j].status = ANSWERED;
+                                FD_CLR(questions[j].fd_S, &on_meeting_set);
+                                questions[j].fd_TA = -1;    
                             }
                         }
+
                     }                    
                     else if(strcmp(buffer, SEND_REPORT) == 0) {
                         FD_CLR(i, &on_meeting_set);
@@ -494,7 +491,6 @@ int main(int argc,char const *argv[]) {
                                 //============ fagat khod porsesh konnande repor bede
                             }
                         }
-                        
                     }
                     else {
                         if(FD_ISSET(i, &req_ask)) {

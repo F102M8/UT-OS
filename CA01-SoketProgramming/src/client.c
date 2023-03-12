@@ -5,6 +5,8 @@ fd_set master_set, working_set;
 
 bool on_meeting;
 bool has_alarm = false;
+char last_ans[BUFFER_SIZE] = {0};
+char ansT[BUFFER_SIZE] = {0}; 
 
 int connect_to_server(int port)
 {
@@ -36,6 +38,8 @@ int connect_to_server(int port)
 
 void alarm_handler(int signal) { 
     has_alarm = true;
+    memset(ansT, 0, BUFFER_SIZE);
+    strcpy(ansT, NOTHING_TO_SAY);
     char message[BUFFER_SIZE] = "Too late\n";
     write(STDOUT, message, sizeof(message));
 }
@@ -282,59 +286,89 @@ int main(int argc, char *argv[]) {
                         //    sendto(meeting_fd, "HI2\n\n", strlen("HI2\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
                         on_meeting = true;
                         
-                        if(true) {
+                        if(status == T) {
                             signal(SIGALRM, alarm_handler);
                             siginterrupt(SIGALRM, 1);
                            char msg3[BUFFER_SIZE] = {0};
                             sprintf(msg3, "You have 60s to answer! \n");
                             write(STDOUT, msg3, sizeof(msg3)); 
                             alarm(MAX_DELAY);
-                            read(STDIN, buffer, BUFFER_SIZE);
+                            read(STDIN, ansT, BUFFER_SIZE);
+                            ansT[strlen(ansT) - 1] = '\0';
                             alarm(0);
                             if(has_alarm) {
                                 send(server_fd, HAS_ALARM, sizeof(HAS_ALARM),0);
-                                on_meeting = false;
-                                has_alarm = false;
                             }
                             else {
                                 send(server_fd, SUCCESSFULY_DONE, sizeof(SUCCESSFULY_DONE), 0);
-                                on_meeting = false;
-                                //***** send port...
                             }
+                            memset(buffer, 0, BUFFER_SIZE);
                         }
-                        if(status == S) {
-                            signal(SIGALRM, alarm_handler2);
-                            siginterrupt(SIGALRM, 1);
-                            char msg3[BUFFER_SIZE] = {0};
-                            sprintf(msg3, "please wait just for  1 minute! \n");
-                            write(STDOUT, msg3, sizeof(msg3)); 
-                            alarm(MAX_DELAY);
-                            recv(meeting_fd, buffer, BUFFER_SIZE, 0);
-                            alarm(0);
-                            if(has_alarm) {
-                                send(server_fd, NO_ANSWER, sizeof(NO_ANSWER),0);
-                                on_meeting = false;
-                                has_alarm = false;
-                            }
-                            else {
-                                send(server_fd, SEND_REPORT, sizeof(SEND_REPORT), 0);
-                                on_meeting = false;
-                                //recv(meeting_fd, )
-                                //**********broad cast
-                            }
-                        }
+                        char from_who[BUFFER_SIZE] = {0};
+                        if(status == T) { strcpy(from_who, FROM_TA); } 
+                        else { strcpy(from_who, FROM_S);} 
+                        sendto(meeting_fd, from_who, strlen(from_who), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
+                        sendto(meeting_fd, ansT, strlen(ansT), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
+
                     }
-                    
-                    else
-                    {
+                    /*else if (strcmp(commit, CLOSE_MEETING) == 0) {
+                        on_meeting = false;
+                        FD_CLR(meeting_fd, &master_set);
                         write(STDOUT, commit, strlen(commit));
                         memset(buffer, 0, BUFFER_SIZE);
+                    }*/
+                    else {                       
+                        write(STDOUT, commit, strlen(commit));
+                        memset(buffer, 0, BUFFER_SIZE);
+                        
                     }
                 }
-                else {
+                else {    
                     recv(meeting_fd, buffer, BUFFER_SIZE, 0);
-                    write(STDOUT, buffer, strlen(buffer));
+                    buffer[strlen(buffer)] = '\0';
+                    char commit[BUFFER_SIZE] = {0};
+                    strncpy(commit, buffer, strlen(buffer));
                     memset(buffer, 0, BUFFER_SIZE);
+                    if (strcmp(commit, FROM_S) == 0) {
+                        if (status == T) {
+                            recv(meeting_fd, buffer, BUFFER_SIZE, 0);
+                            memset(buffer, 0, BUFFER_SIZE);
+                            on_meeting = false;
+                            FD_CLR(meeting_fd, &master_set);
+                            write(STDOUT, CLOSE_MEETING, strlen(CLOSE_MEETING));
+                        }
+                            
+                    }
+                    else if (strcmp(commit, FROM_TA) == 0) {
+                        if (status == S) {
+                            write(STDOUT, commit, strlen(commit));
+                            memset(buffer, 0, BUFFER_SIZE);
+                            
+                            recv(meeting_fd, buffer, BUFFER_SIZE, 0);
+                            buffer[strlen(buffer)] = '\0';
+                            char ans[BUFFER_SIZE] = {0};
+                            strncpy(ans, buffer, strlen(buffer));
+                            strncpy(last_ans, ans, strlen(ans));
+                            memset(buffer, 0, BUFFER_SIZE);
+                            char out[BUFFER_SIZE] = {0};
+                            sprintf(out, ">> %s \n", ans);
+                            write(STDOUT, out, strlen(out));
+
+                            memset(buffer, 0, BUFFER_SIZE);
+                            on_meeting = false;
+                            FD_CLR(meeting_fd, &master_set);
+                            write(STDOUT, CLOSE_MEETING, strlen(CLOSE_MEETING));  
+
+                        }
+                          
+                    } 
+                    else { 
+                        write(STDOUT, buffer, strlen(buffer));
+                        memset(buffer, 0, BUFFER_SIZE);
+                    }
+                    //on_meeting = false;
+                    //FD_CLR(meeting_fd, &master_set);
+                    //write(STDOUT, CLOSE_MEETING, strlen(CLOSE_MEETING));
                 }
             }
         }

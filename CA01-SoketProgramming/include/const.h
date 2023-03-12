@@ -51,7 +51,11 @@
 
 #define END "END_OF_LIST\n"
 #define REQ_CONNECT "req_connect_to_meeting\n"
+#define CLOSE_MEETING "Meeting closed! \n"
+#define FROM_TA "> New message from TA: \n"
+#define FROM_S "> New message from STUDENT: \n"
 
+#define NOTHING_TO_SAY " /"
 typedef enum
 {
     WAITING,
