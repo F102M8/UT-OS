@@ -531,7 +531,7 @@ int main(int argc,char const *argv[]) {
                                         sprintf(text, "%d q: %s \t  ans: %s \n", j, questions[j].Q_text, questions[j].Q_ans);
                                         write(file_fd, text, strlen(text));
                                         write(STDOUT, "New answer submited\n", sizeof("New answer submited\n"));
-                                        questions[j].status = WAITING;
+                                        questions[j].status = ANSWERED;
                                     }
                                     else {
                                         memset(questions[j].Q_ans, 0, BUFFER_SIZE);
