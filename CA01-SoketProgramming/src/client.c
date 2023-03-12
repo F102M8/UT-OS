@@ -218,11 +218,14 @@ int main(int argc, char *argv[]) {
                             memset(buffer, 0, BUFFER_SIZE);
                             recv(server_fd, buffer, BUFFER_SIZE, 0);
                             write(STDOUT, buffer, strlen(buffer));
-                            memset(buffer, 0, BUFFER_SIZE); 
+                            memset(buffer, 0, BUFFER_SIZE);                     
                             recv(server_fd, buffer, BUFFER_SIZE, 0);
                             write(STDOUT, buffer, strlen(buffer));
-                            memset(buffer, 0, BUFFER_SIZE); 
-                            on_meeting = true;
+                            memset(buffer, 0, BUFFER_SIZE);
+                            read(STDIN, buffer, BUFFER_SIZE);
+                            buffer[strlen(buffer) - 1] = '\0';
+                            send(server_fd, buffer, strlen(buffer), 0);
+                            
                         }
                         else {
                             write(STDOUT, "- Do not have permission! \n", sizeof("- Do not have permission! \n"));
@@ -279,7 +282,7 @@ int main(int argc, char *argv[]) {
                         //    sendto(meeting_fd, "HI2\n\n", strlen("HI2\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
                         on_meeting = true;
                         
-                        if(status == T) {
+                        if(true) {
                             signal(SIGALRM, alarm_handler);
                             siginterrupt(SIGALRM, 1);
                            char msg3[BUFFER_SIZE] = {0};
@@ -298,12 +301,12 @@ int main(int argc, char *argv[]) {
                                 on_meeting = false;
                                 //***** send port...
                             }
-                        }  
+                        }
                         if(status == S) {
                             signal(SIGALRM, alarm_handler2);
                             siginterrupt(SIGALRM, 1);
                             char msg3[BUFFER_SIZE] = {0};
-                            sprintf(msg3, "please wait just for 1 minute! \n");
+                            sprintf(msg3, "please wait just for  1 minute! \n");
                             write(STDOUT, msg3, sizeof(msg3)); 
                             alarm(MAX_DELAY);
                             recv(meeting_fd, buffer, BUFFER_SIZE, 0);
@@ -324,7 +327,7 @@ int main(int argc, char *argv[]) {
                     
                     else
                     {
-                        write(STDOUT, buffer, strlen(buffer));
+                        write(STDOUT, commit, strlen(commit));
                         memset(buffer, 0, BUFFER_SIZE);
                     }
                 }

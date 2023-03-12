@@ -71,13 +71,13 @@ void add_to_meeting(int fd, char sport[]) {
         }
     }
     if (find_port) {
-        send(fd, ACCEPT, sizeof(ACCEPT),0);
         send(fd, REQ_CONNECT, sizeof(REQ_CONNECT), 0);
         recv(fd, buffer, buffer, 0);
         memset(buffer, 0, BUFFER_SIZE);
         char s_port[BUFFER_SIZE] = {0};
         snprintf (s_port, BUFFER_SIZE, "%d",port);
         send(fd, s_port, BUFFER_SIZE, 0);
+        
     }
     else {
         send(fd, REJECT, sizeof(REJECT), 0);
@@ -85,6 +85,25 @@ void add_to_meeting(int fd, char sport[]) {
     FD_CLR(fd, &req_join);
     FD_CLR(fd, &on_meeting_set);
 } 
+void req_add_to_meeting(int fd) {
+    if(FD_ISSET(fd, &student_set)) {
+        show_ls_meetings(fd);
+        const char message[] = "+ Enter port...\n";
+        send(fd, message, sizeof(message), 0);
+        FD_SET(fd, &req_join);
+    }
+    else {
+        if(FD_ISSET(fd, &TA_set)) {
+            const char message[] = "- There is another TA!!!!\n";
+            send(fd, message, sizeof(message), 0);
+        }
+        else {
+            const char message[] = "- First set your role! \n";
+            send(fd, message, sizeof(message), 0);
+        }
+    }
+}
+
 int create_meeting(int port) {
     int sock, broadcast = 1, opt = 1;
     char buffer_m[BUFFER_SIZE] = {0};
@@ -239,24 +258,6 @@ void show_ls_meetings(int fd) {
         }
     }
 }
-void req_add_to_meeting(int fd) {
-    if(FD_ISSET(fd, &student_set)) {
-        show_ls_meetings(fd);
-        const char message[] = "+ Enter port...\n";
-        send(fd, message, sizeof(message), 0);
-        FD_SET(fd, &req_join);
-    }
-    else {
-        if(FD_ISSET(fd, &TA_set)) {
-            const char message[] = "- There is another TA!!!!\n";
-            send(fd, message, sizeof(message), 0);
-        }
-        else {
-            const char message[] = "- First set your role! \n";
-            send(fd, message, sizeof(message), 0);
-        }
-    }
-}
 
 void request_ans(int fd){
     if(FD_ISSET(fd, &TA_set)) {
@@ -396,6 +397,9 @@ int main(int argc,char const *argv[]) {
                     write(STDOUT, message, sizeof(message));
 
                     if(strcmp(buffer, STUDENT) == 0) {
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         if(FD_ISSET(i, &TA_set)) {
                             const char message[] = "- Can not change your role! \n";
                             send(i, message, sizeof(message), 0);
@@ -411,6 +415,9 @@ int main(int argc,char const *argv[]) {
                         }
                     }
                     else if(strcmp(buffer, TA) == 0) {
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         if(FD_ISSET(i, &student_set)) {
                             const char message[] = "- Can not change your role! \n";
                             send(i, message, sizeof(message), 0);
@@ -426,18 +433,33 @@ int main(int argc,char const *argv[]) {
                         }
                     }
                     else if(strcmp(buffer, ASK_QUESTION) == 0) {
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         request_ask(i);
                     }
                     else if(strcmp(buffer, SHOW_LIST_QUESTIONS) == 0) {
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         show_ls_questions(i);
                     }
                     else if(strcmp(buffer, ANSWER) == 0) {
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         request_ans(i);
                     }
                     else if(strcmp(buffer, SHOW_MEETINGS) == 0) {
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         show_ls_meetings(i);
                     }
                     else if(strcmp(buffer, JOIN_MEETING) == 0) {
+                        FD_CLR(i, &req_ans);
+                        FD_CLR(i, &req_ask);
+                        FD_CLR(i, &req_join);
                         req_add_to_meeting(i);
                     }
                     else if(strcmp(buffer, HAS_ALARM) == 0) {
