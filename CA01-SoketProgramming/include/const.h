@@ -33,8 +33,8 @@
 
 #define HAS_ALARM  "has_alarm! \n"
 #define SUCCESSFULY_DONE "Good job=) \n"
-#define SEND_REPORT "send_report"
-#define NO_ANSWER "NO ANS"
+#define SEND_REPORT "*** send report please *** \n"
+
 
 #define DEFAULT_PORT 8081
 
@@ -54,6 +54,8 @@
 #define CLOSE_MEETING "Meeting closed! \n"
 #define FROM_TA "> New message from TA: \n"
 #define FROM_S "> New message from STUDENT: \n"
+
+#define SEND_FILE_QUESTION "send"
 
 #define NOTHING_TO_SAY " /"
 typedef enum

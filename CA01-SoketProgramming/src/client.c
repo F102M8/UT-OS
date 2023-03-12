@@ -43,11 +43,6 @@ void alarm_handler(int signal) {
     char message[BUFFER_SIZE] = "Too late\n";
     write(STDOUT, message, sizeof(message));
 }
-void alarm_handler2(int signal) { 
-    has_alarm = true;
-    char message[BUFFER_SIZE] = "sorry - no answer from TA \n";
-    write(STDOUT, message, sizeof(message));
-}
 
 void welcome()
 {
@@ -87,54 +82,9 @@ int create_port(int server_port, int id)
 void meeting_handler()
 {
 }
-/*int conect_to_meeting(int port)
-{
-    int sock, broadcast = 1, opt = 1;
-    struct sockaddr_in bc_address;
 
-    sock = socket(AF_INET, SOCK_DGRAM, 0);
-    setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
-    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-
-    bc_address.sin_family = AF_INET;
-    bc_address.sin_port = htons(port);
-    bc_address.sin_addr.s_addr = inet_addr(NET_ADDRESS);
-
-    bind(sock, (struct sockaddr *)&bc_address, sizeof(bc_address));
-    char msg[BUFFER_SIZE] = {0};
-    sprintf(msg, "***you added to meeting!***\n");
-    write(STDOUT, msg, sizeof(msg));
-    return sock;
-}*/
-/*int broadcat(int port)
-{
-    // signal(SIGALRM, alarm_handler);
-    // siginterrupt(SIGALRM, 1);
-    int sock, broadcast = 1, opt = 1;
-    struct sockaddr_in bc_address;
-
-    sock = socket(AF_INET, SOCK_DGRAM, 0);
-    setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
-    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-
-    bc_address.sin_family = AF_INET;
-    bc_address.sin_port = htons(port);
-    bc_address.sin_addr.s_addr = inet_addr(NET_ADDRESS);
-
-    bind(sock, (struct sockaddr *)&bc_address, sizeof(bc_address));
-    char msg[BUFFER_SIZE] = {0};
-    
-    sendto(sock, "HI\n\n", strlen("HI\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
-
-    sprintf(msg, "***you and your student added to meeting!\n***");
-    write(STDOUT, msg, sizeof(msg));
-    sendto(sock, "HI\n\n", strlen("HI\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
-
-    return sock;
-}*/
 int main(int argc, char *argv[]) {
-    // signal(SIGALRM, alarm_handler);
-    // siginterrupt(SIGALRM, 1);
+
     STATUS status = N;
     if (argc <= 1) {
         const char message[] = "on default port...!\n";
@@ -258,10 +208,6 @@ int main(int argc, char *argv[]) {
                         sprintf(msg, "*** NEW MEETING FOR YOU ***\nport: %d\n", meeting_port);
                         write(STDOUT, msg, sizeof(msg));
                         memset(buffer, 0, BUFFER_SIZE);
-
-                        //meeting_fd = (status == S) ? conect_to_meeting(meeting_port) : broadcat(meeting_port);
-                        
-                        //meeting_fd = conect_to_meeting(meeting_port);
                         
                         int broadcast = 1, opt = 1;
                         struct sockaddr_in bc_address;
@@ -282,8 +228,6 @@ int main(int argc, char *argv[]) {
                         char msg2[BUFFER_SIZE] = {0};
                         sprintf(msg2, "***you added to meeting!***\n");
                         write(STDOUT, msg2, sizeof(msg2));
-                        //if(status == T)  
-                        //    sendto(meeting_fd, "HI2\n\n", strlen("HI2\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
                         on_meeting = true;
                         
                         if(status == T) {
@@ -294,8 +238,8 @@ int main(int argc, char *argv[]) {
                             write(STDOUT, msg3, sizeof(msg3)); 
                             alarm(MAX_DELAY);
                             read(STDIN, ansT, BUFFER_SIZE);
-                            ansT[strlen(ansT) - 1] = '\0';
                             alarm(0);
+                            ansT[strlen(ansT) - 1] = '\0';
                             if(has_alarm) {
                                 send(server_fd, HAS_ALARM, sizeof(HAS_ALARM),0);
                             }
@@ -303,6 +247,7 @@ int main(int argc, char *argv[]) {
                                 send(server_fd, SUCCESSFULY_DONE, sizeof(SUCCESSFULY_DONE), 0);
                             }
                             memset(buffer, 0, BUFFER_SIZE);
+                            has_alarm = false;
                         }
                         char from_who[BUFFER_SIZE] = {0};
                         if(status == T) { strcpy(from_who, FROM_TA); } 
@@ -311,12 +256,21 @@ int main(int argc, char *argv[]) {
                         sendto(meeting_fd, ansT, strlen(ansT), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
 
                     }
-                    /*else if (strcmp(commit, CLOSE_MEETING) == 0) {
-                        on_meeting = false;
-                        FD_CLR(meeting_fd, &master_set);
+                    else if(strcmp(commit, SEND_REPORT) == 0) {
                         write(STDOUT, commit, strlen(commit));
                         memset(buffer, 0, BUFFER_SIZE);
-                    }*/
+                        send(server_fd, last_ans, strlen(last_ans), 0);
+                        recv(server_fd, buffer, BUFFER_SIZE, 0);
+                        buffer[strlen(buffer)] = '\0';
+                        char new_msg[BUFFER_SIZE] = {0};
+                        strncpy(new_msg, buffer, strlen(buffer));
+                        memset(buffer, 0, BUFFER_SIZE);
+                        write(STDOUT, new_msg, strlen(new_msg));
+                        read(STDIN, buffer, BUFFER_SIZE);
+                        buffer[strlen(buffer) - 1] = '\0';
+                        send(server_fd, buffer, BUFFER_SIZE, 0);
+                        memset(buffer, 0, BUFFER_SIZE);
+                    }
                     else {                       
                         write(STDOUT, commit, strlen(commit));
                         memset(buffer, 0, BUFFER_SIZE);
@@ -348,12 +302,20 @@ int main(int argc, char *argv[]) {
                             buffer[strlen(buffer)] = '\0';
                             char ans[BUFFER_SIZE] = {0};
                             strncpy(ans, buffer, strlen(buffer));
+                            memset(last_ans, 0, BUFFER_SIZE);
                             strncpy(last_ans, ans, strlen(ans));
                             memset(buffer, 0, BUFFER_SIZE);
                             char out[BUFFER_SIZE] = {0};
                             sprintf(out, ">> %s \n", ans);
+                            
+                            /*if (strcmp(ans, NOTHING_TO_SAY) == 0) {
+                                char message[BUFFER_SIZE] = "sorry - no answer from TA \n";
+                                write(STDOUT, message, sizeof(message));
+                            }
+                            else {
+                                
+                            }*/
                             write(STDOUT, out, strlen(out));
-
                             memset(buffer, 0, BUFFER_SIZE);
                             on_meeting = false;
                             FD_CLR(meeting_fd, &master_set);
@@ -366,9 +328,6 @@ int main(int argc, char *argv[]) {
                         write(STDOUT, buffer, strlen(buffer));
                         memset(buffer, 0, BUFFER_SIZE);
                     }
-                    //on_meeting = false;
-                    //FD_CLR(meeting_fd, &master_set);
-                    //write(STDOUT, CLOSE_MEETING, strlen(CLOSE_MEETING));
                 }
             }
         }

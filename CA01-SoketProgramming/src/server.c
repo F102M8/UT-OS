@@ -136,7 +136,7 @@ int setup_server(int port) {
     bind(server_fd, (struct sockaddr *)&address, sizeof(address));
     listen(server_fd, MAX_CONNECTION_TO_THE_SERVER);
 
-    const char message[] ="Server is running...\nWaiting for clients...\n";
+    const char message[] ="Server is running...\nWaiting for clients...\n~get report of questions(type send)\n";
     write(STDOUT, message, sizeof(message));
     return server_fd;
 }
@@ -344,7 +344,7 @@ int main(int argc,char const *argv[]) {
     FD_ZERO(&req_join);
 
     int max_fd = server_fd;
-    //FD_SET(STDIN, &master_set);
+    FD_SET(STDIN, &master_set);
     FD_SET(server_fd, &master_set);   
     set_questions_buff();
 
@@ -356,7 +356,20 @@ int main(int argc,char const *argv[]) {
 
         for(int i = 0; i < max_fd + 1; i++) {
             if (FD_ISSET(i, &working_set)) { 
-                if (i == server_fd) {
+                if (i == STDIN) {
+                    read(STDIN, buffer, BUFFER_SIZE);
+                    buffer[strlen(buffer) - 1] = '\0';
+
+                    /*if ((strcmp(buffer, SEND_FILE_QUESTION) == 0)) {
+                        write(STDOUT, "file created! \n", sizeof("file created! \n"));
+                        //-----------------------------
+                    }
+                    else {
+                        write(STDOUT, "sth went wrong! \n", sizeof("sth went wrong! \n"));
+                    }*/
+                    memset(buffer, 0, BUFFER_SIZE);   
+                }
+                else if (i == server_fd) {
                     new_client_fd = accept_client(server_fd);
                     FD_SET(new_client_fd, &master_set);
                     if (new_client_fd > max_fd)
@@ -479,16 +492,25 @@ int main(int argc,char const *argv[]) {
                                 questions[j].status = ANSWERED;
                                 FD_CLR(questions[j].fd_S, &on_meeting_set);
                                 questions[j].fd_TA = -1;    
-                            }
-                        }
-
-                    }                    
-                    else if(strcmp(buffer, SEND_REPORT) == 0) {
-                        FD_CLR(i, &on_meeting_set);
-                        for(int j = 0; j < question_count; j++) {
-                            if(questions[j].fd_S == i) {
-                                questions[j].status = ANSWERED;
                                 //============ fagat khod porsesh konnande repor bede
+                                memset(buffer, 0, BUFFER_SIZE);
+                                send(questions[j].fd_S, SEND_REPORT, sizeof(SEND_REPORT), 0);
+                                recv(questions[j].fd_S, buffer, BUFFER_SIZE, 0);
+                                buffer[strlen(buffer)] = '\0';
+                                char ans[BUFFER_SIZE] = {0};
+                                strncpy(ans, buffer, strlen(buffer));
+                                char msg[BUFFER_SIZE] = {0};
+                                sprintf(msg, ">> Your problem : %s\n>> TA's answer: %s\n Do you get it? (y/n) \n ", questions[j].Q_text, ans);
+                                send(questions[j].fd_S, msg, sizeof(msg), 0);
+                                memset(buffer, 0, BUFFER_SIZE);
+                                recv(questions[j].fd_S, buffer, BUFFER_SIZE, 0);
+                                if(buffer[0] == 'y') {
+                                    strncpy (questions[j].Q_ans, ans, strlen(ans));
+                                    write(STDOUT, "New answer submited\n", sizeof("New answer submited\n"));
+                                }
+                                else {
+                                    questions[j].status = WAITING;
+                                }
                             }
                         }
                     }
