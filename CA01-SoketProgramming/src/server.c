@@ -54,7 +54,7 @@ void set_questions_buff() {
         questions[i].fd_S = -1;
         questions[i].fd_TA = -1;
         questions[i].meeting_port = -1;
-        questions[i].status = ANSWERED;
+        questions[i].status = NO_NEED;
     }
 }
 
@@ -329,6 +329,10 @@ void answer(int server_port, int fd, char sid[]) {
 }
 
 int main(int argc,char const *argv[]) {
+    int file_fd ;
+    file_fd = creat("report.txt", O_RDWR);
+    write(file_fd, "report: \n", strlen("report: \n")); 
+    
     if (argc <= 1) {
         const char message[] = "server on default port...!\n";
         write(STDOUT, message, sizeof(message));
@@ -347,6 +351,7 @@ int main(int argc,char const *argv[]) {
     FD_SET(STDIN, &master_set);
     FD_SET(server_fd, &master_set);   
     set_questions_buff();
+
 
     int new_client_fd;
 
@@ -492,7 +497,6 @@ int main(int argc,char const *argv[]) {
                                 questions[j].status = ANSWERED;
                                 FD_CLR(questions[j].fd_S, &on_meeting_set);
                                 questions[j].fd_TA = -1;    
-                                //============ fagat khod porsesh konnande repor bede
                                 memset(buffer, 0, BUFFER_SIZE);
                                 send(questions[j].fd_S, SEND_REPORT, sizeof(SEND_REPORT), 0);
                                 recv(questions[j].fd_S, buffer, BUFFER_SIZE, 0);
@@ -506,6 +510,10 @@ int main(int argc,char const *argv[]) {
                                 recv(questions[j].fd_S, buffer, BUFFER_SIZE, 0);
                                 if(buffer[0] == 'y') {
                                     strncpy (questions[j].Q_ans, ans, strlen(ans));
+                                    
+                                    char text[BUFFER_SIZE] = {0};
+                                    sprintf(text, "%d q: %s \t  ans: %s \n", j, questions[j].Q_text, questions[j].Q_ans);
+                                    write(file_fd, text, strlen(text));
                                     write(STDOUT, "New answer submited\n", sizeof("New answer submited\n"));
                                 }
                                 else {
@@ -535,4 +543,5 @@ int main(int argc,char const *argv[]) {
             } 
         }       
     }
+    close(file_fd);
 }
