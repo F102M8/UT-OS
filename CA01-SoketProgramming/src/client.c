@@ -79,9 +79,7 @@ int create_port(int server_port, int id)
 {
     return (server_port + id + 1);
 }
-void meeting_handler()
-{
-}
+
 
 int main(int argc, char *argv[]) {
 
@@ -307,14 +305,7 @@ int main(int argc, char *argv[]) {
                             memset(buffer, 0, BUFFER_SIZE);
                             char out[BUFFER_SIZE] = {0};
                             sprintf(out, ">> %s \n", ans);
-                            
-                            /*if (strcmp(ans, NOTHING_TO_SAY) == 0) {
-                                char message[BUFFER_SIZE] = "sorry - no answer from TA \n";
-                                write(STDOUT, message, sizeof(message));
-                            }
-                            else {
-                                
-                            }*/
+
                             write(STDOUT, out, strlen(out));
                             memset(buffer, 0, BUFFER_SIZE);
                             on_meeting = false;

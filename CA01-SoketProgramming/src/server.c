@@ -15,6 +15,7 @@ fd_set student_set, TA_set;
 fd_set req_ask, req_join, req_ans;
 fd_set meetings_set;
 fd_set on_meeting_set;
+fd_set must_submit_report;
 struct Question questions[MAX_QUESTIONS];
 int question_count = 0;
 
@@ -124,8 +125,7 @@ int create_meeting(int port) {
 
 int setup_server(int port) {
     struct sockaddr_in address;
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0); //TCP
-
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     int opt = 1;
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     
@@ -136,7 +136,7 @@ int setup_server(int port) {
     bind(server_fd, (struct sockaddr *)&address, sizeof(address));
     listen(server_fd, MAX_CONNECTION_TO_THE_SERVER);
 
-    const char message[] ="Server is running...\nWaiting for clients...\n~get report of questions(type send)\n";
+    const char message[] ="Server is running...\nWaiting for clients...\n";
     write(STDOUT, message, sizeof(message));
     return server_fd;
 }
@@ -185,7 +185,7 @@ void submit_question(int fd) {
     const char message[] = "+ new question added successfully!\n";
     questions[question_count].fd_S = fd;
     strncpy(questions[question_count].Q_text, buffer, strlen(buffer));
-    //questions[question_count].Q_text[strlen(buffer) - 1] = '\0';
+
     questions[question_count].status = WAITING;
     write(STDOUT, message, sizeof(message));
     send(fd, message, sizeof(message), 0);
@@ -286,7 +286,7 @@ void answer(int server_port, int fd, char sid[]) {
         const char message[] = "- not found! \n";
         send(fd, message, sizeof(message), 0);
     }
-    else if(questions[id].status == UNDER_DISCUSSION) {
+    else if((questions[id].status == UNDER_DISCUSSION) || (questions[id].status == NEED_TO_SUBMIT)) {
         const char message[] = "- under discussion! \n";
         send(fd, message, sizeof(message), 0);
     }
@@ -348,7 +348,7 @@ int main(int argc,char const *argv[]) {
     FD_ZERO(&req_join);
 
     int max_fd = server_fd;
-    FD_SET(STDIN, &master_set);
+   // FD_SET(STDIN, &master_set);
     FD_SET(server_fd, &master_set);   
     set_questions_buff();
 
@@ -361,20 +361,7 @@ int main(int argc,char const *argv[]) {
 
         for(int i = 0; i < max_fd + 1; i++) {
             if (FD_ISSET(i, &working_set)) { 
-                if (i == STDIN) {
-                    read(STDIN, buffer, BUFFER_SIZE);
-                    buffer[strlen(buffer) - 1] = '\0';
-
-                    /*if ((strcmp(buffer, SEND_FILE_QUESTION) == 0)) {
-                        write(STDOUT, "file created! \n", sizeof("file created! \n"));
-                        //-----------------------------
-                    }
-                    else {
-                        write(STDOUT, "sth went wrong! \n", sizeof("sth went wrong! \n"));
-                    }*/
-                    memset(buffer, 0, BUFFER_SIZE);   
-                }
-                else if (i == server_fd) {
+                if (i == server_fd) {
                     new_client_fd = accept_client(server_fd);
                     FD_SET(new_client_fd, &master_set);
                     if (new_client_fd > max_fd)
@@ -494,7 +481,8 @@ int main(int argc,char const *argv[]) {
                         FD_CLR(i, &on_meeting_set);
                         for(int j = 0; j < question_count; j++) {
                             if(questions[j].fd_TA == i) {
-                                questions[j].status = ANSWERED;
+
+                                questions[j].status = NEED_TO_SUBMIT;
                                 FD_CLR(questions[j].fd_S, &on_meeting_set);
                                 questions[j].fd_TA = -1;    
                                 memset(buffer, 0, BUFFER_SIZE);
@@ -507,10 +495,12 @@ int main(int argc,char const *argv[]) {
                                 sprintf(msg, ">> Your problem : %s\n>> TA's answer: %s\n Do you get it? (y/n) \n ", questions[j].Q_text, ans);
                                 send(questions[j].fd_S, msg, sizeof(msg), 0);
                                 memset(buffer, 0, BUFFER_SIZE);
+                                FD_SET(questions[j].fd_S, &must_submit_report);
+                                strncpy (questions[j].Q_ans, ans, strlen(ans));
+                                /**
                                 recv(questions[j].fd_S, buffer, BUFFER_SIZE, 0);
                                 if(buffer[0] == 'y') {
                                     strncpy (questions[j].Q_ans, ans, strlen(ans));
-                                    
                                     char text[BUFFER_SIZE] = {0};
                                     sprintf(text, "%d q: %s \t  ans: %s \n", j, questions[j].Q_text, questions[j].Q_ans);
                                     write(file_fd, text, strlen(text));
@@ -519,6 +509,7 @@ int main(int argc,char const *argv[]) {
                                 else {
                                     questions[j].status = WAITING;
                                 }
+                                */
                             }
                         }
                     }
@@ -531,6 +522,24 @@ int main(int argc,char const *argv[]) {
                         }
                         else if (FD_ISSET(i, &req_join)) {
                             add_to_meeting(i, buffer);
+                        }
+                        else if (FD_ISSET(i, &must_submit_report)) {
+                            for(int j = 0; j < question_count; j++) {
+                                if ((questions[j].status == NEED_TO_SUBMIT) && (questions[j].fd_S == i)) {
+                                    if(buffer[0] == 'y') {
+                                        char text[BUFFER_SIZE] = {0};
+                                        sprintf(text, "%d q: %s \t  ans: %s \n", j, questions[j].Q_text, questions[j].Q_ans);
+                                        write(file_fd, text, strlen(text));
+                                        write(STDOUT, "New answer submited\n", sizeof("New answer submited\n"));
+                                        questions[j].status = WAITING;
+                                    }
+                                    else {
+                                        memset(questions[j].Q_ans, 0, BUFFER_SIZE);
+                                        questions[j].status = WAITING;
+                                    }
+                            
+                                }
+                            }
                         }
                         else {
                             const char message[] = "sth went wrong! \n";

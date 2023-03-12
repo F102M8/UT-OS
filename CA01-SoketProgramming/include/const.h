@@ -26,7 +26,7 @@
 #define MAX_TA 20
 #define MAX_STUDENT 30
 
-#define MAX_DELAY 5
+#define MAX_DELAY 60
 
 #define ACCEPT "accepted! \n"
 #define REJECT "rejected! \n"
@@ -64,6 +64,7 @@ typedef enum
     ANSWERED,
     UNDER_DISCUSSION,
     NO_NEED,
+    NEED_TO_SUBMIT,
 } Q_level;
 
 typedef enum
