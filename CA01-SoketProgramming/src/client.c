@@ -4,6 +4,7 @@ char buffer[BUFFER_SIZE] = {0};
 fd_set master_set, working_set;
 
 bool on_meeting;
+bool has_alarm = false;
 
 int connect_to_server(int port)
 {
@@ -33,9 +34,14 @@ int connect_to_server(int port)
     return fd;
 }
 
-void alarm_handler(int signal)
-{
+void alarm_handler(int signal) { 
+    has_alarm = true;
     char message[BUFFER_SIZE] = "Too late\n";
+    write(STDOUT, message, sizeof(message));
+}
+void alarm_handler2(int signal) { 
+    has_alarm = true;
+    char message[BUFFER_SIZE] = "sorry - no answer from TA \n";
     write(STDOUT, message, sizeof(message));
 }
 
@@ -133,7 +139,7 @@ int main(int argc, char *argv[]) {
     int server_port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
 
     int server_fd = connect_to_server(server_port);
-    int meeting_fd = 1;
+    int meeting_fd = 999;
     int meeting_port = 999;
 
     FD_ZERO(&master_set);
@@ -269,10 +275,51 @@ int main(int argc, char *argv[]) {
                         char msg2[BUFFER_SIZE] = {0};
                         sprintf(msg2, "***you added to meeting!***\n");
                         write(STDOUT, msg2, sizeof(msg2));
-                        if(status == T)  
-                            sendto(meeting_fd, "HI2\n\n", strlen("HI2\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
+                        //if(status == T)  
+                        //    sendto(meeting_fd, "HI2\n\n", strlen("HI2\n\n"), 0, (struct sockaddr *)&bc_address, sizeof(bc_address));
                         on_meeting = true;
-                       
+                        
+                        if(status == T) {
+                            signal(SIGALRM, alarm_handler);
+                            siginterrupt(SIGALRM, 1);
+                           char msg3[BUFFER_SIZE] = {0};
+                            sprintf(msg3, "You have 60s to answer! \n");
+                            write(STDOUT, msg3, sizeof(msg3)); 
+                            alarm(MAX_DELAY);
+                            read(STDIN, buffer, BUFFER_SIZE);
+                            alarm(0);
+                            if(has_alarm) {
+                                send(server_fd, HAS_ALARM, sizeof(HAS_ALARM),0);
+                                on_meeting = false;
+                                has_alarm = false;
+                            }
+                            else {
+                                send(server_fd, SUCCESSFULY_DONE, sizeof(SUCCESSFULY_DONE), 0);
+                                on_meeting = false;
+                                //***** send port...
+                            }
+                        }  
+                        if(status == S) {
+                            signal(SIGALRM, alarm_handler2);
+                            siginterrupt(SIGALRM, 1);
+                            char msg3[BUFFER_SIZE] = {0};
+                            sprintf(msg3, "please wait just for 1 minute! \n");
+                            write(STDOUT, msg3, sizeof(msg3)); 
+                            alarm(MAX_DELAY);
+                            recv(meeting_fd, buffer, BUFFER_SIZE, 0);
+                            alarm(0);
+                            if(has_alarm) {
+                                send(server_fd, NO_ANSWER, sizeof(NO_ANSWER),0);
+                                on_meeting = false;
+                                has_alarm = false;
+                            }
+                            else {
+                                send(server_fd, SEND_REPORT, sizeof(SEND_REPORT), 0);
+                                on_meeting = false;
+                                //recv(meeting_fd, )
+                                //**********broad cast
+                            }
+                        }
                     }
                     
                     else

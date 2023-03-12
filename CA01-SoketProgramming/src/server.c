@@ -6,6 +6,7 @@ struct Question {
     int fd_meeting;
     int fd_S;
     int fd_TA;
+    char Q_ans[BUFFER_SIZE];
 };
 
 char buffer[BUFFER_SIZE] = {0};
@@ -61,7 +62,6 @@ int create_port(int server_port, int id) {
     return (server_port + id + 1);
 }
 
-
 void add_to_meeting(int fd, char sport[]) {
     bool find_port = false;
     int port = atoi(sport);
@@ -82,6 +82,8 @@ void add_to_meeting(int fd, char sport[]) {
     else {
         send(fd, REJECT, sizeof(REJECT), 0);
     }
+    FD_CLR(fd, &req_join);
+    FD_CLR(fd, &on_meeting_set);
 } 
 int create_meeting(int port) {
     int sock, broadcast = 1, opt = 1;
@@ -273,8 +275,7 @@ void request_ans(int fd){
         }      
     }
 }
-void answer(int server_port, int fd, char sid[]) {
-    
+void answer(int server_port, int fd, char sid[]) {  
     int id = atoi(sid);
     if(id < 0) {
         const char message[] = "- not found! - (id >= 0) \n";
@@ -294,6 +295,10 @@ void answer(int server_port, int fd, char sid[]) {
     }
     else if(FD_ISSET(questions[id].fd_S, &on_meeting_set)) {
         const char message[] = "- Student is bussy for now, pls answer another question \n";
+        send(fd, message, sizeof(message), 0);
+    }
+    else if (questions[id].status == NO_NEED) {
+        const char message[] = "- NO NEED \n";
         send(fd, message, sizeof(message), 0);
     }
     else {
@@ -378,6 +383,12 @@ int main(int argc,char const *argv[]) {
                         FD_CLR(i, &req_ans);
                         FD_CLR(i, &req_ask);
                         FD_CLR(i, &req_join);
+                        FD_CLR(i, &on_meeting_set);
+                        for(int j = 0; j < question_count; j++) {
+                            if(questions[j].fd_S == i) {
+                                questions[j].status = NO_NEED;
+                            }
+                        }
                         continue;
                     }
                     char message[BUFFER_SIZE] = {0};
@@ -428,6 +439,40 @@ int main(int argc,char const *argv[]) {
                     }
                     else if(strcmp(buffer, JOIN_MEETING) == 0) {
                         req_add_to_meeting(i);
+                    }
+                    else if(strcmp(buffer, HAS_ALARM) == 0) {
+                        FD_CLR(i, &on_meeting_set);
+                        for(int j = 0; j < question_count; j++) {
+                            if(questions[j].fd_TA == i) {
+                                questions[j].fd_TA = -1;
+                            }
+                        }
+                    }
+                    else if(strcmp(buffer, NO_ANSWER) == 0) {
+                        FD_CLR(i, &on_meeting_set);
+                        for(int j = 0; j < question_count; j++) {
+                            if(questions[j].fd_S == i) {
+                                questions[j].status = WAITING;
+                            }
+                        }
+                    }
+                    else if(strcmp(buffer, SUCCESSFULY_DONE) == 0) {
+                        FD_CLR(i, &on_meeting_set);
+                        for(int j = 0; j < question_count; j++) {
+                            if(questions[j].fd_TA == i) {
+                                questions[j].status = ANSWERED;
+                            }
+                        }
+                    }                    
+                    else if(strcmp(buffer, SEND_REPORT) == 0) {
+                        FD_CLR(i, &on_meeting_set);
+                        for(int j = 0; j < question_count; j++) {
+                            if(questions[j].fd_S == i) {
+                                questions[j].status = ANSWERED;
+                                //============ fagat khod porsesh konnande repor bede
+                            }
+                        }
+                        
                     }
                     else {
                         if(FD_ISSET(i, &req_ask)) {
