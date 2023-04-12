@@ -28,7 +28,7 @@ const string ALL_POSITIONS_FILE = "positions.csv";
 const string EXECUTABLE_FILE_COUNTRY = "./country";
 const string EXECUTABLE_FILE_CLUB = "./club";
 const string EXECUTABLE_FILE_POSITION = "./position";
-//const string NAMED_PIPES_FOLDER = "named_pipes/";
+const string NAMED_PIPES_FOLDER = "named_pipes/";
 
 const int MESSAGE_SIZE = 1024;
 
