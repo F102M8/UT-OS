@@ -55,7 +55,6 @@ int main(int argc, char *argv[]) {
     int fd_unnamed_pipe_from_country = stoi(argv[3]);
     string path = string(argv[1]);
     string club_name = string(argv[2]);
-    //cout << "open club proc from path: " << path << " name: " << club_name << "\n";
 
     char buffer[MASSAGE_SIZE];
     memset(buffer, 0, MASSAGE_SIZE);
@@ -65,14 +64,14 @@ int main(int argc, char *argv[]) {
     vector<string> selected_pos = split(string(buffer), ',');
     int num_of_selected_pos = selected_pos.size();
     close(fd_unnamed_pipe_from_country);
-    //for (string pos : selected_pos) { cout << pos << "\n";}
 
     //parse CSV file
     vector<Positions_Data> pos_data = init_position_data(selected_pos);
-    //for(Positions_Data P : pos_data) { cout << P.sum_age << "\n";}
     pasre_csv_file(path, club_name, pos_data);
-    //for(Positions_Data P : pos_data) { cout << P.min_age << "\n";}
     
+    //send data of this club to position procs:
+
+
     while(wait(NULL) > 0); 
     return EXIT_SUCCESS;
 }

@@ -74,11 +74,9 @@ int main(int argc, char *argv[]) {
     vector<string> selected_pos;
     get_selected_pos(selected_pos);
     int num_of_selected_pos = selected_pos.size();
-    //for (string pos: selected_pos) { cout << pos << "\n";}
 
     //get countries:
     vector<string> countries_name;
-    //vector<filesystem::directory_entry> countries;
     read_countries(path, countries_name);
     int num_of_countries = countries_name.size();
 
@@ -86,7 +84,6 @@ int main(int argc, char *argv[]) {
     int fd_unnamed_pipes_main_to_country[num_of_countries][2];
     for (int i = 0; i < num_of_countries; i++) {
         pipe(fd_unnamed_pipes_main_to_country[i]);
-        //cout << fd_unnamed_pipes_main_to_country[i][0] << "-" << fd_unnamed_pipes_main_to_country[i][1] << "\n";
     }
 
     // create countries proc:
