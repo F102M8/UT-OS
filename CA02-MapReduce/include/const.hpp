@@ -7,7 +7,6 @@
 #include <sstream>
 #include <fstream>
 #include <cstdarg>
-
 #include <regex>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -15,10 +14,17 @@
 #include <sys/stat.h>
 using namespace std;
 
-struct player {
-    string name;
+struct Player {
+    //string name;
     string position;
     int age;    
+};
+struct Positions_Data {
+    string name;
+    int min_age;
+    int max_age;
+    int sum_age;
+    int count;
 };
 
 const string ALL_POSITIONS_FILE = "positions.csv";

@@ -17,7 +17,7 @@ void read_positions_file(const string &posintions_file_folder, vector<string> &p
     ifstream file(posintions_file_path);
     if (!file.is_open()) {
         cerr <<  "Failed to open file " << posintions_file_path.c_str() << "\n";
-        abort();
+        exit(EXIT_FAILURE);
     }
     string line;
     getline(file, line);
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
             string exec_file = EXECUTABLE_FILE_COUNTRY;
             string fd_pipe = to_string(fd_unnamed_pipes_main_to_country[i][0]);
             string country_folder_path = path + '/' + countries_name[i];
-            char* arguments[] = {(char*)exec_file.c_str(),(char*)country_folder_path.c_str(), (char*)fd_pipe.c_str(), NULL};
+            char* arguments[] = {(char*)exec_file.c_str(),(char*)country_folder_path.c_str(), (char*)fd_pipe.c_str(), (char*)to_string(num_of_selected_pos).c_str() , NULL};
             execv(exec_file.c_str(), arguments);
 
             return EXIT_SUCCESS;
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
     }
-    // create poition proc:
+    // create position proc:
     for (int i = 0; i < num_of_selected_pos; i++) {
         int pid = fork();
         

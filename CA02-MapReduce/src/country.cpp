@@ -1,16 +1,4 @@
 #include "../include/const.hpp"
-vector<string> split(const string &str, char delim) {
-    vector<string> elements;
-    istringstream ss(str);
-    string item;
-    while (getline(ss, item, delim)) {
-        item.erase(0, item.find_first_not_of(' '));
-        item.erase(item.find_last_not_of(' ') + 1);
-        if (!item.empty())
-            elements.push_back(item);
-    }
-    return elements;
-}
 
 void read_clubs(const string &country_folder, vector<string> &clubs_name) {
     for (const auto &entry: filesystem::directory_iterator(country_folder)) {
@@ -20,11 +8,10 @@ void read_clubs(const string &country_folder, vector<string> &clubs_name) {
     }
 }
 
-
 int main(int argc, char *argv[]) {
+    //save argument
     string path = string(argv[1]);
-    cout << "country  from path: " << path << " opend\n";
-
+    //cout << "country  from path: " << path << " opend\n";
     int fd_unnamed_pipe_from_main = stoi(argv[2]);
     
     char buffer[MASSAGE_SIZE];
@@ -32,8 +19,8 @@ int main(int argc, char *argv[]) {
 
     //read from pipe -> get selected positions
     read(fd_unnamed_pipe_from_main, buffer, sizeof(buffer));
-    vector<string> selected_pos = split(string(buffer), ',');
-    int num_of_selected_pos = selected_pos.size();
+    //vector<string> selected_pos = split(string(buffer), ',');
+    int num_of_selected_pos = stoi(argv[3]) ;
     close(fd_unnamed_pipe_from_main);
 
     //get clubs CSV_files
@@ -53,13 +40,7 @@ int main(int argc, char *argv[]) {
         int pid = fork();
         
         if (pid > 0) {
-            string buffer;
-            buffer = "";
-            buffer += selected_pos[0];
-            for (int i = 1; i < num_of_selected_pos; i++) {
-                buffer += "," + selected_pos[i];
-            }
-            write(fd_unnamed_pipes_country_to_club[i][1], buffer.c_str(), buffer.length());
+            write(fd_unnamed_pipes_country_to_club[i][1], buffer, sizeof(buffer));
             close(fd_unnamed_pipes_country_to_club[i][1]);
         }
         else if (pid == 0) {
