@@ -56,8 +56,8 @@ int main(int argc, char *argv[]) {
     string path = string(argv[1]);
     string club_name = string(argv[2]);
 
-    char buffer[MASSAGE_SIZE];
-    memset(buffer, 0, MASSAGE_SIZE);
+    char buffer[MESSAGE_SIZE];
+    memset(buffer, 0, MESSAGE_SIZE);
     
     //read from pipe -> get selected positions
     read(fd_unnamed_pipe_from_country, buffer, sizeof(buffer));
@@ -70,7 +70,9 @@ int main(int argc, char *argv[]) {
     pasre_csv_file(path, club_name, pos_data);
     
     //send data of this club to position procs:
+    for (int i = 0; i < num_of_selected_pos; i ++) {
 
+    }
 
     while(wait(NULL) > 0); 
     return EXIT_SUCCESS;

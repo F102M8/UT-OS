@@ -80,12 +80,11 @@ int main(int argc, char *argv[]) {
     read_countries(path, countries_name);
     int num_of_countries = countries_name.size();
 
-    // create pipes 
+    // create pipes to country procs:
     int fd_unnamed_pipes_main_to_country[num_of_countries][2];
     for (int i = 0; i < num_of_countries; i++) {
         pipe(fd_unnamed_pipes_main_to_country[i]);
     }
-
     // create countries proc:
     for(int i = 0; i < num_of_countries; i++) {
         int pid = fork();
@@ -104,7 +103,7 @@ int main(int argc, char *argv[]) {
             string exec_file = EXECUTABLE_FILE_COUNTRY;
             string fd_pipe = to_string(fd_unnamed_pipes_main_to_country[i][0]);
             string country_folder_path = path + '/' + countries_name[i];
-            char* arguments[] = {(char*)exec_file.c_str(),(char*)country_folder_path.c_str(), (char*)fd_pipe.c_str(), (char*)to_string(num_of_selected_pos).c_str() , NULL};
+            char* arguments[] = {(char*)exec_file.c_str(),(char*)country_folder_path.c_str(), (char*)fd_pipe.c_str(), NULL};
             execv(exec_file.c_str(), arguments);
 
             return EXIT_SUCCESS;
@@ -119,10 +118,12 @@ int main(int argc, char *argv[]) {
         int pid = fork();
         
         if (pid > 0) {
-            
+
         }
         else if (pid == 0) {
-
+            string exec_file = EXECUTABLE_FILE_POSITION;
+            char* arguments[] = {(char*) exec_file.c_str(), NULL};
+            execv(exec_file.c_str(), arguments);
             return EXIT_SUCCESS;
         }
         else {

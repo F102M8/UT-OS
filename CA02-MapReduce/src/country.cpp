@@ -13,12 +13,11 @@ int main(int argc, char *argv[]) {
     string path = string(argv[1]);
     int fd_unnamed_pipe_from_main = stoi(argv[2]);
     
-    char buffer[MASSAGE_SIZE];
-    memset(buffer, 0, MASSAGE_SIZE);
+    char buffer[MESSAGE_SIZE];
+    memset(buffer, 0, MESSAGE_SIZE);
 
     //read from pipe -> get selected positions
     read(fd_unnamed_pipe_from_main, buffer, sizeof(buffer));
-    int num_of_selected_pos = stoi(argv[3]) ;
     close(fd_unnamed_pipe_from_main);
 
     //get clubs CSV_files

@@ -14,11 +14,6 @@
 #include <sys/stat.h>
 using namespace std;
 
-struct Player {
-    //string name;
-    string position;
-    int age;    
-};
 struct Positions_Data {
     string name;
     int min_age;
@@ -31,5 +26,7 @@ const string ALL_POSITIONS_FILE = "positions.csv";
 
 const string EXECUTABLE_FILE_COUNTRY = "./country";
 const string EXECUTABLE_FILE_CLUB = "./club";
+const string EXECUTABLE_FILE_POSITION = "./position";
 
-const int MASSAGE_SIZE = 1024;
+
+const int MESSAGE_SIZE = 1024;

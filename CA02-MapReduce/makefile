@@ -8,8 +8,7 @@ PATH_INC := include
 
 OUT = ClubsAgeStats.out
 
-all : $(OUT) country club
-# club position
+all : $(OUT) country club position
 
 #---------------------------------------------------------
 $(OUT): $(PATH_SRC)/ClubsAgeStats.cpp $(PATH_INC)/const.hpp
@@ -20,8 +19,8 @@ country: $(PATH_SRC)/country.cpp $(PATH_INC)/const.hpp
 club: $(PATH_SRC)/club.cpp $(PATH_INC)/const.hpp
 		$(CC) $(PATH_SRC)/club.cpp -o club
 
-#position: $(PATH_SRC)/position.cpp $(PATH_INC)/const.hpp
-#		$(CC) $(PATH_SRC)/position.cpp -o position
+position: $(PATH_SRC)/position.cpp $(PATH_INC)/const.hpp
+		$(CC) $(PATH_SRC)/position.cpp -o position
 
 #---------------------------------------------------------
 PHONY: all clean
@@ -29,3 +28,4 @@ clean:
 	rm -rf ClubsAgeStats.out
 	rm -rf country
 	rm -rf club
+	rm -rf position
