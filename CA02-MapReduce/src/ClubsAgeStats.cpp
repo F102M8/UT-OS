@@ -25,7 +25,7 @@ void read_positions_file(const string &posintions_file_folder, vector<string> &p
     file.close();
 }
 
-void read_countries(const string &countries_file_folder, vector<string> countries_name) {
+void read_countries(const string &countries_file_folder, vector<string> &countries_name) {
     for (const auto &entry: filesystem::directory_iterator(countries_file_folder)) {
         if(entry.path().filename() != ALL_POSITIONS_FILE) {
             countries_name.push_back(entry.path().filename());
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     vector<string> countries_name;
     //vector<filesystem::directory_entry> countries;
     read_countries(path, countries_name);
-    int num_of_countries = countries.size();
+    int num_of_countries = countries_name.size();
 
     //create pipes 
     int fd_unnamed_pipes_main_to_country[num_of_countries][2];
@@ -98,17 +98,16 @@ int main(int argc, char *argv[]) {
             buffer = "";
             buffer += selected_pos[0];
             for (int i = 1; i < num_of_selected_pos; i++) {
-                buffer += "," + selected_pos[i]; 
+                buffer += "," + selected_pos[i];
             }
             write(fd_unnamed_pipes_main_to_country[i][1], buffer.c_str(), buffer.length());
             close(fd_unnamed_pipes_main_to_country[i][1]);
         }
         else if (pid == 0) {
             string exec_file = EXECUTABLE_FILE_COUNTRY;
-            //char in_buffer[MASSAGE_SIZE];
-            //read(fd_unnamed_pipes_main_to_country[i][0], in_buffer, MASSAGE_SIZE);
-            string fd__pipe = to_string(fd_unnamed_pipes_main_to_country[i][0]);
-            char* arguments[] = {(char*)exec_file.c_str(), (char*)fd__pipe.c_str(), NULL};
+            string fd_pipe = to_string(fd_unnamed_pipes_main_to_country[i][0]);
+            string country_folder_path = path + '/' + countries_name[i];
+            char* arguments[] = {(char*)exec_file.c_str(),(char*)country_folder_path.c_str(), (char*)fd_pipe.c_str(), NULL};
             execv(exec_file.c_str(), arguments);
 
             return EXIT_SUCCESS;

@@ -24,5 +24,6 @@ struct player {
 const string ALL_POSITIONS_FILE = "positions.csv";
 
 const string EXECUTABLE_FILE_COUNTRY = "./country";
+const string EXECUTABLE_FILE_CLUB = "./club";
 
 const int MASSAGE_SIZE = 1024;
