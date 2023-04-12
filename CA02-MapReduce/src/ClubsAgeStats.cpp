@@ -32,7 +32,16 @@ void read_countries(const string &countries_file_folder, vector<string> &countri
         }
     }
 }
+void read_clubs(const string &countries_file_folder, vector<string> &clubs_name) {
+    for (const auto &entry: filesystem::directory_iterator(countries_file_folder)) {
+        if(entry.path().filename() != ALL_POSITIONS_FILE) {
+            for (const auto &entry2: filesystem::directory_iterator(countries_file_folder + "/" + string(entry.path().filename()))) {
+                clubs_name.push_back(entry2.path().filename());
+            }
 
+        }
+    }
+}
 bool valid_clubs_path(const string &path) {
     return true;
 }
@@ -70,15 +79,19 @@ int main(int argc, char *argv[]) {
     //print all positions:
     print_all_positions(positions);
 
-    //get selected positions from user
-    vector<string> selected_pos;
-    get_selected_pos(selected_pos);
-    int num_of_selected_pos = selected_pos.size();
-
     //get countries:
     vector<string> countries_name;
     read_countries(path, countries_name);
     int num_of_countries = countries_name.size();
+
+    //get all clubs:
+    vector<string> clubs_name;
+    read_clubs(path, clubs_name);
+
+    //get selected positions from user
+    vector<string> selected_pos;
+    get_selected_pos(selected_pos);
+    int num_of_selected_pos = selected_pos.size();
 
     // create pipes to country procs:
     int fd_unnamed_pipes_main_to_country[num_of_countries][2];
@@ -105,7 +118,6 @@ int main(int argc, char *argv[]) {
             string country_folder_path = path + '/' + countries_name[i];
             char* arguments[] = {(char*)exec_file.c_str(),(char*)country_folder_path.c_str(), (char*)fd_pipe.c_str(), NULL};
             execv(exec_file.c_str(), arguments);
-
             return EXIT_SUCCESS;
         }
         else {
@@ -113,16 +125,29 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
     }
+    // create pipes to position procs:
+    int fd_unnamed_pipes_main_to_position[num_of_countries][2];
+    for (int i = 0; i < num_of_selected_pos; i++) {
+        pipe(fd_unnamed_pipes_main_to_position[i]);
+    }
     // create position proc:
     for (int i = 0; i < num_of_selected_pos; i++) {
         int pid = fork();
         
         if (pid > 0) {
-
+            string buffer;
+            buffer = "";
+            buffer += clubs_name[0];
+            for (int i = 1; i < clubs_name.size(); i++) {
+                buffer += "," + clubs_name[i];
+            }
+            write(fd_unnamed_pipes_main_to_position[i][1], buffer.c_str(), buffer.length());
+            close(fd_unnamed_pipes_main_to_position[i][1]);
         }
         else if (pid == 0) {
             string exec_file = EXECUTABLE_FILE_POSITION;
-            char* arguments[] = {(char*) exec_file.c_str(), NULL};
+            string fd_pipe = to_string(fd_unnamed_pipes_main_to_position[i][0]);
+            char* arguments[] = {(char*) exec_file.c_str(), (char*)selected_pos[i].c_str(), (char*)fd_pipe.c_str(), NULL};
             execv(exec_file.c_str(), arguments);
             return EXIT_SUCCESS;
         }

@@ -51,6 +51,19 @@ void pasre_csv_file(const string &path, const string &csv_file_name, vector<Posi
     file.close();
 }
 
+void send_data_to_named_pipe(const string &myfifo, const Positions_Data &pos_data) {
+    
+    //string path = NAMED_PIPES_FOLDER + myfifo;
+    //cout << path;
+    mkfifo(myfifo.c_str(), 0666);
+    int fd_named_pipe = open(myfifo.c_str(), O_WRONLY);
+    string all_data = "";
+    all_data += to_string(pos_data.min_age) + ',' + to_string(pos_data.max_age);
+    all_data += "," + to_string(pos_data.sum_age) + "," + to_string(pos_data.count);
+    write(fd_named_pipe, all_data.c_str(), all_data.length());
+    close(fd_named_pipe);
+}
+
 int main(int argc, char *argv[]) {
     int fd_unnamed_pipe_from_country = stoi(argv[3]);
     string path = string(argv[1]);
@@ -71,7 +84,14 @@ int main(int argc, char *argv[]) {
     
     //send data of this club to position procs:
     for (int i = 0; i < num_of_selected_pos; i ++) {
-
+        string myfifo = club_name + "_to_" + selected_pos[i];
+        for(int j = 0; j < pos_data.size(); j++) {
+            if (pos_data[j].name == selected_pos[i]) {
+                send_data_to_named_pipe(myfifo, pos_data[j]);
+                break;
+            }
+        }
+        
     }
 
     while(wait(NULL) > 0); 
