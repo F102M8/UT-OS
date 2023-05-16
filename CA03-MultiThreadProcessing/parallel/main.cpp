@@ -8,8 +8,10 @@
 
 #include "const.hpp"
 
-#define NUM_THREADS 8
+#define NUM_THREADS 16
 pthread_t threads[NUM_THREADS];
+int threads_start_end_row[NUM_THREADS][2];
+int threads_start_end_col[NUM_THREADS][2];
 
 using std::cout;
 using std::endl;
@@ -51,7 +53,7 @@ typedef struct tagBITMAPINFOHEADER
 int rows;
 int cols;
 uint8_t*** input_pic;
-uint8_t*** result_pic;
+//uint8_t*** result_pic;
 
 bool fillAndAllocate(char *&buffer, const char *fileName, int &rows, int &cols, int &bufferSize)
 {
@@ -151,8 +153,18 @@ void writeOutBmp24(char *fileBuffer, const char *nameOfFileToCreate, int bufferS
   }
   write.write(fileBuffer, bufferSize);
 }
+void make_pixel_matrix() {
+  input_pic = new uint8_t**[rows];
 
-void* make_pixel_matrix(void* arg) {
+  for(int i = 0; i < rows; i++) {
+    input_pic[i] = new uint8_t*[cols];
+
+    for(int j = 0; j < cols; j++) {
+      input_pic[i][j] = new uint8_t[3];
+    }
+  }
+}
+void* make_pixel_matrix2(void* arg) {
   uint8_t ****pic_ = (uint8_t ****)arg;
   *pic_ = new uint8_t**[rows];
   uint8_t ***pic = *pic_;
@@ -165,28 +177,43 @@ void* make_pixel_matrix(void* arg) {
   }
   pthread_exit(NULL);
 }
+
 void* horizontial_mirror(void* arg) {
-  for (int r = 0; r < rows; r++) {
+  int thread_first_rows = ((int*)arg)[0];
+  int thread_last_rows = ((int*)arg)[1];
+  for (int r =thread_first_rows ; r <= thread_last_rows; r++) {
 		for (int c = 0; c < cols/2; c++){
-      swap(input_pic[r][c], input_pic[r][cols - 1 - c]);  
+       swap(input_pic[r][c],input_pic[r][cols - c -1]);
     }
   }
   pthread_exit(NULL);
 }
-void* vertical_mirror() {
+void* vertical_mirror(void* arg) {
+  int thread_first_cols = ((int*)arg)[0];
+  int thread_last_cols = ((int*)arg)[1];
     for (int r = 0; r < rows / 2; r++) {
-		  for (int c = 0; c < cols; c++){
+		  for (int c = thread_first_cols; c <= thread_last_cols; c++){
         swap(input_pic[r][c], input_pic[rows - 1 -r][c]); 
       }
   }
   pthread_exit(NULL);
 }
-void* sharpen() {
+void* sharpen(void* arg) {
+    int thread_first_rows = ((int*)arg)[0];
+    if (thread_first_rows == 0)
+        thread_first_rows = 1;
+
+    int thread_last_rows = ((int*)arg)[1];
+    if (thread_last_rows == rows - 1)
+        thread_last_rows = rows - 2;
+
  uint8_t out_img[rows][cols][3];
-  for (int i = 1; i < rows - 1; i++)
+  for (int i = thread_first_rows; i <= thread_last_rows ; i++)
   {
     for (int j = 1; j < cols - 1; j++)
     {
+      if (i - 1 < 0 || j - 1 < 0 || i + 1 >= rows || j + 1 >= cols)
+        continue;
       int temp = 0;
       temp -= input_pic[i - 1][j][RED];
       temp -= input_pic[i][j - 1][RED];
@@ -231,16 +258,19 @@ void* sharpen() {
     }
     
   }
-
-  for (int i = 1; i < rows - 1; i++){
+ for (int i = thread_first_rows; i < thread_last_rows; i++){
     for (int j = 1; j < cols - 1; j++){
       input_pic[i][j] = out_img[i][j];
     }
   }
+ 
+
   pthread_exit(NULL);
 }
-void* sepia() {
-    for (int r = 0; r < rows; r++) {
+void* sepia(void* arg) {
+    int thread_first_cols = ((int*)arg)[0];
+    int thread_last_cols = ((int*)arg)[1];
+    for (int r = thread_first_cols; r <= thread_last_cols; r++) {
 		  for (int c = 0; c < cols; c++) { 
         int red = input_pic[r][c][RED], green = input_pic[r][c][GREEN], blue = input_pic[r][c][BLUE];
         input_pic[r][c][RED]= min(255, (int) (red * T[RED][RED] + green * T[RED][GREEN] + blue * T[RED][BLUE]));
@@ -268,14 +298,55 @@ void draw_line(int x1, int y1, int x2, int y2) {
        }
     pthread_exit(NULL);   
 }
-void* draw_X_shape() {
+void* draw_X_shape(void* arg) {
   draw_line(0, rows - 1, cols - 1, 0);
   draw_line(cols - 1, rows - 1, 0, 0);
   pthread_exit(NULL);
 }
 
-void multi_thread_pro(void* (*filter)(void*)) {
+void  calculate_contribution_for_each_thread_ROW() {
+    int contribution = floor((double)rows / NUM_THREADS);
+    for (int i = 0; i < (NUM_THREADS - 1); i++)
+    {
+        threads_start_end_row[i][0] = i * contribution;
+        threads_start_end_row[i][1] = (i + 1) * contribution - 1;
+    }
+    threads_start_end_row[NUM_THREADS - 1][0] = (NUM_THREADS - 1) * contribution;
+    threads_start_end_row[NUM_THREADS - 1][1] = rows - 1;
   
+}
+void  calculate_contribution_for_each_thread_COL()
+{
+    int contribution = floor((double)cols / NUM_THREADS);
+    for (int i = 0; i < (NUM_THREADS - 1); i++)
+    {
+        threads_start_end_col[i][0] = i * contribution;
+        threads_start_end_col[i][1] = (i + 1) * contribution - 1;
+    }
+    threads_start_end_col[NUM_THREADS - 1][0] = (NUM_THREADS - 1) * contribution;
+    threads_start_end_col[NUM_THREADS - 1][1] = cols - 1;
+  
+}
+void multi_thread_pro(void* (*filter)(void*), int thread_args[NUM_THREADS][2]) {
+  //create
+  for (int i = 0; i < NUM_THREADS; i++) {
+    pthread_create(&threads[i], NULL, filter, (void*) thread_args[i]);
+  }
+  //join 
+  for (int i = 0; i < NUM_THREADS; i++) {
+    pthread_join(threads[i], NULL);
+  }
+}
+
+void apply_filters() {
+  calculate_contribution_for_each_thread_COL();
+  calculate_contribution_for_each_thread_ROW();
+
+  multi_thread_pro(&horizontial_mirror, threads_start_end_row);
+  multi_thread_pro(&vertical_mirror, threads_start_end_col);
+  multi_thread_pro(&sharpen, threads_start_end_row);
+  multi_thread_pro(&sepia, threads_start_end_row);
+  //multi_thread_pro(&draw_X_shape);
 }
 
 int main(int argc, char *argv[])
@@ -290,27 +361,12 @@ int main(int argc, char *argv[])
     cout << "File read error" << endl;
     return 1;
   }
-  // read input file
-  //create 1.read - 2.apply filter
-  pthread_t threads_for_create[2];
-  pthread_create(&threads_for_create[0], NULL, &make_pixel_matrix,(void*) &input_pic);
-  pthread_create(&threads_for_create[1], NULL, &make_pixel_matrix,(void*) &result_pic);
-  //join
-  pthread_join(threads_for_create[0], NULL);
+
+  make_pixel_matrix();
   getpixelsFromBMP24(bufferSize, rows, cols, fileBuffer);
 
   // apply filters
-  pthread_join(threads_for_create[1], NULL);
-  //horizontial_mirror();
-  multi_thread_pro(&horizontial_mirror);
-  //vertical_mirror();
-  multi_thread_pro(&vertical_mirror);
-  //sharpen();
-  multi_thread_pro(&sharpen);
-  //sepia();
-  multi_thread_pro(&sepia);
-  //draw_X_shape();
-  multi_thread_pro(&draw_X_shape);
+  apply_filters();
 
   // write output file
   writeOutBmp24(fileBuffer, OUTPUT_FILE, bufferSize);
