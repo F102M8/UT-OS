@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <bits/stdc++.h>
 
-
 #include "const.hpp"
 
 using std::cout;
@@ -80,7 +79,7 @@ bool fillAndAllocate(char *&buffer, const char *fileName, int &rows, int &cols, 
   }
 }
 
-void getPixlesFromBMP24(int end, int rows, int cols, char *fileReadBuffer)
+void getpixelsFromBMP24(int end, int rows, int cols, char *fileReadBuffer)
 {
   int count = 1;
   int extra = cols % 4;
@@ -161,7 +160,6 @@ void make_pixel_matrix() {
   }
 }
 
-
 void horizontial_mirror() {
   for (int r = 0; r < rows; r++) {
 		for (int c = 0; c < cols/2; c++){
@@ -178,14 +176,62 @@ void vertical_mirror() {
   }
   return;
 }
-
 void sharpen() {
-  vector<vector<double>> kernel = 
+ uint8_t out_img[rows][cols][3];
+  for (int i = 1; i < rows - 1; i++)
+  {
+    for (int j = 1; j < cols - 1; j++)
     {
-      {0, -1, 0},
-      {-1, 5, -1},
-      {0, -1, 0}
-    };
+      int temp = 0;
+      temp -= pixels[i - 1][j][RED];
+      temp -= pixels[i][j - 1][RED];
+      temp +=(5 * pixels[i][j][RED]);
+      temp -= pixels[i][j + 1][RED];
+      temp -= pixels[i + 1][j][RED];
+
+      if (temp > 255)
+        out_img[i][j][RED] = 255;
+      else if (temp < 0)
+        out_img[i][j][RED] = 0;
+      else
+        out_img[i][j][RED] = temp;
+
+      temp = 0;
+      temp -= pixels[i - 1][j][BLUE];
+      temp -= pixels[i][j - 1][BLUE];
+      temp += (5 * pixels[i][j][BLUE]);
+      temp -= pixels[i][j + 1][BLUE];
+      temp -= pixels[i + 1][j][BLUE];
+
+      if (temp > 255)
+        out_img[i][j][BLUE] = 255;
+      else if (temp < 0)
+        out_img[i][j][BLUE] = 0;
+      else
+        out_img[i][j][BLUE] = temp;
+
+      temp = 0;
+      temp -= pixels[i - 1][j][GREEN];
+      temp -= pixels[i][j - 1][GREEN];
+      temp += (5 * pixels[i][j][GREEN]);
+      temp -= pixels[i][j + 1][GREEN];
+      temp -= pixels[i + 1][j][GREEN];
+
+      if (temp > 255)
+        out_img[i][j][GREEN] = 255;
+      else if (temp < 0)
+        out_img[i][j][GREEN] = 0;
+      else
+        out_img[i][j][GREEN] = temp;
+    }
+    
+  }
+
+  for (int i = 1; i < rows - 1; i++){
+    for (int j = 1; j < cols - 1; j++){
+      pixels[i][j] = out_img[i][j];
+    }
+  }
   
 }
 void sepia() {
@@ -220,13 +266,6 @@ void draw_X_shape() {
   draw_line(0, rows - 1, cols - 1, 0);
   draw_line(cols - 1, rows - 1, 0, 0);
 }
-void apply_filters() {
-  horizontial_mirror();
-  vertical_mirror();
-  sharpen();
-  sepia();
-  draw_X_shape();
-}
 
 int main(int argc, char *argv[])
 {
@@ -239,17 +278,20 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  time_t start, end, end_read, end_apply_filters, end_generate_output;
+  time_t start, end;
   time(&start);
   make_pixel_matrix();
   
   // read input file
-  
-  getPixlesFromBMP24(bufferSize, rows, cols, fileBuffer);
-
+  getpixelsFromBMP24(bufferSize, rows, cols, fileBuffer);
 
   // apply filters
-  apply_filters();
+
+ horizontial_mirror();
+ vertical_mirror();
+ sharpen();
+  sepia();
+ draw_X_shape();
 
   // write output file
   writeOutBmp24(fileBuffer, "output.bmp", bufferSize);
@@ -259,5 +301,6 @@ int main(int argc, char *argv[])
   double time_taken = double(end - start);
     cout << "Total time taken by program is : " << fixed << time_taken << setprecision(10);
     cout << " sec " << endl;
+    
   return 0;
 }
