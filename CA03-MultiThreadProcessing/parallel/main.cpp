@@ -1,5 +1,3 @@
-// use class for img and filters?!
-//change time-cal method
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
@@ -15,7 +13,7 @@ using std::ofstream;
 using namespace std;
 
 #pragma pack(1)
-#pragma once
+//#pragma once
 
 typedef int LONG;
 typedef unsigned short WORD;
@@ -78,7 +76,6 @@ bool fillAndAllocate(char *&buffer, const char *fileName, int &rows, int &cols, 
     return 0;
   }
 }
-
 void getpixelsFromBMP24(int end, int rows, int cols, char *fileReadBuffer)
 {
   int count = 1;
@@ -109,7 +106,6 @@ void getpixelsFromBMP24(int end, int rows, int cols, char *fileReadBuffer)
       }
   }
 }
-
 void writeOutBmp24(char *fileBuffer, const char *nameOfFileToCreate, int bufferSize)
 {
   std::ofstream write(nameOfFileToCreate);
@@ -147,6 +143,9 @@ void writeOutBmp24(char *fileBuffer, const char *nameOfFileToCreate, int bufferS
   }
   write.write(fileBuffer, bufferSize);
 }
+
+
+
 
 void make_pixel_matrix() {
   pixels = new uint8_t**[rows];
@@ -283,18 +282,15 @@ int main(int argc, char *argv[])
   make_pixel_matrix();
   
   // read input file
-  getpixelsFromBMP24(bufferSize, rows, cols, fileBuffer);
+  ///getpixelsFromBMP24(bufferSize, rows, cols, fileBuffer);
+  read_img();
 
   // apply filters
-
- horizontial_mirror();
- vertical_mirror();
- sharpen();
-  sepia();
- draw_X_shape();
+  apply_filter();
 
   // write output file
-  writeOutBmp24(fileBuffer, "output.bmp", bufferSize);
+  //writeOutBmp24(fileBuffer, "output.bmp", bufferSize);
+  write_img();
 
   // Calculate total time
   time(&end);
