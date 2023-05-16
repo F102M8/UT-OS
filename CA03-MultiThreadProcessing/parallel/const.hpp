@@ -1,5 +1,8 @@
 using namespace std;
  
+
+#define OUTPUT_FILE  "output.bmp" 
+
 const int RED = 0;
 const int GREEN = 1;
 const int BLUE = 2;
@@ -14,3 +17,4 @@ const vector<vector<double>> SHARPEN_KERNEL=
       {-1, 5, -1},
       {0, -1, 0}
     };
+

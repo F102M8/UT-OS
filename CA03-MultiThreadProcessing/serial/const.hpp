@@ -1,4 +1,6 @@
 using namespace std;
+
+#define OUTPUT_FILE  "output.bmp"
  
 const int RED = 0;
 const int GREEN = 1;
