@@ -8,7 +8,7 @@
 
 #include "const.hpp"
 
-#define NUM_THREADS 16
+#define NUM_THREADS 8
 pthread_t threads[NUM_THREADS];
 int threads_start_end_row[NUM_THREADS][2];
 int threads_start_end_col[NUM_THREADS][2];
@@ -53,7 +53,6 @@ typedef struct tagBITMAPINFOHEADER
 int rows;
 int cols;
 uint8_t*** input_pic;
-//uint8_t*** result_pic;
 
 bool fillAndAllocate(char *&buffer, const char *fileName, int &rows, int &cols, int &bufferSize)
 {
@@ -164,19 +163,6 @@ void make_pixel_matrix() {
     }
   }
 }
-void* make_pixel_matrix2(void* arg) {
-  uint8_t ****pic_ = (uint8_t ****)arg;
-  *pic_ = new uint8_t**[rows];
-  uint8_t ***pic = *pic_;
-  for(int i = 0; i < rows; i++) {
-    pic[i] = new uint8_t*[cols];
-
-    for(int j = 0; j < cols; j++) {
-      pic[i][j] = new uint8_t[3];
-    }
-  }
-  pthread_exit(NULL);
-}
 
 void* horizontial_mirror(void* arg) {
   int thread_first_rows = ((int*)arg)[0];
@@ -206,65 +192,38 @@ void* sharpen(void* arg) {
     int thread_last_rows = ((int*)arg)[1];
     if (thread_last_rows == rows - 1)
         thread_last_rows = rows - 2;
-
+ 
  uint8_t out_img[rows][cols][3];
-  for (int i = thread_first_rows; i <= thread_last_rows ; i++)
+  for (int r = thread_first_rows; r < thread_last_rows -1  ; r++)
   {
-    for (int j = 1; j < cols - 1; j++)
+    for (int c = 1; c < cols - 1; c++)
     {
-      if (i - 1 < 0 || j - 1 < 0 || i + 1 >= rows || j + 1 >= cols)
+      if (r - 1 < 0 || c - 1 < 0 || r + 1 > rows || c + 1 > cols)
         continue;
-      int temp = 0;
-      temp -= input_pic[i - 1][j][RED];
-      temp -= input_pic[i][j - 1][RED];
-      temp +=(5 * input_pic[i][j][RED]);
-      temp -= input_pic[i][j + 1][RED];
-      temp -= input_pic[i + 1][j][RED];
+        for(int k = 0; k < 3; k++)  {
+                int temp = 0;
+      temp -= input_pic[r - 1][c][k];
+      temp -= input_pic[r][c - 1][k];
+      temp +=(5 * input_pic[r][c][k]);
+      temp -= input_pic[r][c + 1][k];
+      temp -= input_pic[r + 1][c][k];
 
-      if (temp > 255)
-        out_img[i][j][RED] = 255;
-      else if (temp < 0)
-        out_img[i][j][RED] = 0;
-      else
-        out_img[i][j][RED] = temp;
-
-      temp = 0;
-      temp -= input_pic[i - 1][j][BLUE];
-      temp -= input_pic[i][j - 1][BLUE];
-      temp += (5 * input_pic[i][j][BLUE]);
-      temp -= input_pic[i][j + 1][BLUE];
-      temp -= input_pic[i + 1][j][BLUE];
-
-      if (temp > 255)
-        out_img[i][j][BLUE] = 255;
-      else if (temp < 0)
-        out_img[i][j][BLUE] = 0;
-      else
-        out_img[i][j][BLUE] = temp;
-
-      temp = 0;
-      temp -= input_pic[i - 1][j][GREEN];
-      temp -= input_pic[i][j - 1][GREEN];
-      temp += (5 * input_pic[i][j][GREEN]);
-      temp -= input_pic[i][j + 1][GREEN];
-      temp -= input_pic[i + 1][j][GREEN];
-
-      if (temp > 255)
-        out_img[i][j][GREEN] = 255;
-      else if (temp < 0)
-        out_img[i][j][GREEN] = 0;
-      else
-        out_img[i][j][GREEN] = temp;
+      out_img[r][c][k] = min(max(temp, 0), 255);
+        }
+      
     }
     
   }
- for (int i = thread_first_rows; i < thread_last_rows; i++){
-    for (int j = 1; j < cols - 1; j++){
-      input_pic[i][j] = out_img[i][j];
+ for (int r = thread_first_rows; r < thread_last_rows- 1; r++){
+    for (int c = 1; c < cols - 1; c++){
+      if (c < 0 || c < 0 || c > rows - 1 || c > cols - 1)
+        continue;
+      input_pic[c][c][RED] = out_img[c][c][RED];
+      input_pic[c][c][GREEN] = out_img[c][c][GREEN];
+      input_pic[c][c][BLUE] = out_img[c][c][BLUE];
     }
   }
  
-
   pthread_exit(NULL);
 }
 void* sepia(void* arg) {
@@ -280,31 +239,32 @@ void* sepia(void* arg) {
   }
   pthread_exit(NULL);
 }
-void draw_line(int x1, int y1, int x2, int y2) {
-    int dx = x2 - x1;
-    int dy = y2 - y1;
-    int steps = max(abs(dx), abs(dy));
-    float xIncrement = static_cast<float>(dx) / (float) steps;
-    float yIncrement = static_cast<float>(dy) / (float) steps;
-    auto x = static_cast<float>(x1);
-    auto y = static_cast<float>(y1);
-       for (int i = 0; i <= steps; ++i) {
-          input_pic[(int)y][(int)x][RED] = 255;
-          input_pic[(int)y][(int)x][GREEN] = 255;
-          input_pic[(int)y][(int)x][BLUE] = 255;
 
-          x += xIncrement;
-          y += yIncrement;
-       }
-    pthread_exit(NULL);   
-}
-void* draw_X_shape(void* arg) {
-  draw_line(0, rows - 1, cols - 1, 0);
-  draw_line(cols - 1, rows - 1, 0, 0);
-  pthread_exit(NULL);
+void* draw_X_shape(void* arg)
+{
+    int thread_first_rows = ((int*)arg)[0];
+    int thread_last_rows = ((int*)arg)[1];
+
+    if (thread_first_rows >= (rows / 2))
+        pthread_exit(NULL);
+
+    int x = cols / 2;
+    double line_slope = (double(cols) / rows );
+    for (int i = thread_first_rows; i < (thread_last_rows); i++)
+    {
+        int delta_x = (int)(i * line_slope);
+        for (int j = 0; j < 3; j++)
+        {
+            input_pic[i][ delta_x][j] = 255;
+            input_pic[i][cols - delta_x - 1][j] = 255;
+            input_pic[rows - i - 1][ delta_x][j] = 255;
+            input_pic[rows - i - 1][cols - delta_x - 1][j] = 255;
+        }
+    }
+    pthread_exit(NULL);
 }
 
-void  calculate_contribution_for_each_thread_ROW() {
+void  srart_end_for_each_thread_ROW() {
     int contribution = floor((double)rows / NUM_THREADS);
     for (int i = 0; i < (NUM_THREADS - 1); i++)
     {
@@ -315,7 +275,7 @@ void  calculate_contribution_for_each_thread_ROW() {
     threads_start_end_row[NUM_THREADS - 1][1] = rows - 1;
   
 }
-void  calculate_contribution_for_each_thread_COL()
+void  start_end_for_each_thread_COL()
 {
     int contribution = floor((double)cols / NUM_THREADS);
     for (int i = 0; i < (NUM_THREADS - 1); i++)
@@ -338,17 +298,6 @@ void multi_thread_pro(void* (*filter)(void*), int thread_args[NUM_THREADS][2]) {
   }
 }
 
-void apply_filters() {
-  calculate_contribution_for_each_thread_COL();
-  calculate_contribution_for_each_thread_ROW();
-
-  multi_thread_pro(&horizontial_mirror, threads_start_end_row);
-  multi_thread_pro(&vertical_mirror, threads_start_end_col);
-  multi_thread_pro(&sharpen, threads_start_end_row);
-  multi_thread_pro(&sepia, threads_start_end_row);
-  //multi_thread_pro(&draw_X_shape);
-}
-
 int main(int argc, char *argv[])
 {
   auto start = chrono::high_resolution_clock::now();
@@ -363,10 +312,19 @@ int main(int argc, char *argv[])
   }
 
   make_pixel_matrix();
+
+  // read input file
   getpixelsFromBMP24(bufferSize, rows, cols, fileBuffer);
 
   // apply filters
-  apply_filters();
+  start_end_for_each_thread_COL();
+  srart_end_for_each_thread_ROW();
+
+  multi_thread_pro(&horizontial_mirror, threads_start_end_row);
+  multi_thread_pro(&vertical_mirror, threads_start_end_col);
+  multi_thread_pro(&sharpen, threads_start_end_row);
+  multi_thread_pro(&sepia, threads_start_end_row);
+  multi_thread_pro(&draw_X_shape, threads_start_end_row);
 
   // write output file
   writeOutBmp24(fileBuffer, OUTPUT_FILE, bufferSize);

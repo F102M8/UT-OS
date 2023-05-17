@@ -1,5 +1,3 @@
-// use class for img and filters?!
-//change time-cal method
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
@@ -47,7 +45,7 @@ typedef struct tagBITMAPINFOHEADER
 
 int rows;
 int cols;
-uint8_t*** pixels;
+uint8_t*** input_pic;
 
 bool fillAndAllocate(char *&buffer, const char *fileName, int &rows, int &cols, int &bufferSize)
 {
@@ -93,15 +91,15 @@ void getpixelsFromBMP24(int end, int rows, int cols, char *fileReadBuffer)
         {
         case 0:
           // fileReadBuffer[end - count] is the red value
-          pixels[i][j][RED] = fileReadBuffer[end - count];
+          input_pic[i][j][RED] = fileReadBuffer[end - count];
           break;
         case 1:
           // fileReadBuffer[end - count] is the green value
-          pixels[i][j][GREEN] = fileReadBuffer[end - count];
+          input_pic[i][j][GREEN] = fileReadBuffer[end - count];
           break;
         case 2:
           // fileReadBuffer[end - count] is the blue value
-          pixels[i][j][BLUE] = fileReadBuffer[end - count];
+          input_pic[i][j][BLUE] = fileReadBuffer[end - count];
           break;
         // go to the next position in the buffer
         }
@@ -130,15 +128,15 @@ void writeOutBmp24(char *fileBuffer, const char *nameOfFileToCreate, int bufferS
         {
         case 0:
           // write red value in fileBuffer[bufferSize - count]
-          fileBuffer[bufferSize - count] = pixels[i][j][RED];
+          fileBuffer[bufferSize - count] = input_pic[i][j][RED];
           break;
         case 1:
           // write green value in fileBuffer[bufferSize - count]
-          fileBuffer[bufferSize - count] = pixels[i][j][GREEN];
+          fileBuffer[bufferSize - count] = input_pic[i][j][GREEN];
           break;
         case 2:
           // write blue value in fileBuffer[bufferSize - count]
-          fileBuffer[bufferSize - count] = pixels[i][j][BLUE];
+          fileBuffer[bufferSize - count] = input_pic[i][j][BLUE];
           break;
         // go to the next position in the buffer
         }
@@ -149,13 +147,13 @@ void writeOutBmp24(char *fileBuffer, const char *nameOfFileToCreate, int bufferS
 }
 
 void make_pixel_matrix() {
-  pixels = new uint8_t**[rows];
+  input_pic = new uint8_t**[rows];
 
   for(int i = 0; i < rows; i++) {
-    pixels[i] = new uint8_t*[cols];
+    input_pic[i] = new uint8_t*[cols];
 
     for(int j = 0; j < cols; j++) {
-      pixels[i][j] = new uint8_t[3];
+      input_pic[i][j] = new uint8_t[3];
     }
   }
 }
@@ -163,7 +161,7 @@ void make_pixel_matrix() {
 void horizontial_mirror() {
   for (int r = 0; r < rows; r++) {
 		for (int c = 0; c < cols/2; c++){
-      swap(pixels[r][c], pixels[r][cols - 1 - c]);  
+      swap(input_pic[r][c], input_pic[r][cols - 1 - c]);  
     }
   }
   return;
@@ -171,76 +169,50 @@ void horizontial_mirror() {
 void vertical_mirror() {
     for (int r = 0; r < rows / 2; r++) {
 		  for (int c = 0; c < cols; c++){
-        swap(pixels[r][c], pixels[rows - 1 -r][c]); 
+        swap(input_pic[r][c], input_pic[rows - 1 -r][c]); 
       }
   }
   return;
 }
 void sharpen() {
  uint8_t out_img[rows][cols][3];
-  for (int i = 1; i < rows - 1; i++)
+
+  for (int r = 1; r < rows - 1 ; r++)
   {
-    for (int j = 1; j < cols - 1; j++)
+    for (int c = 1; c < cols - 1; c++)
     {
-      int temp = 0;
-      temp -= pixels[i - 1][j][RED];
-      temp -= pixels[i][j - 1][RED];
-      temp +=(5 * pixels[i][j][RED]);
-      temp -= pixels[i][j + 1][RED];
-      temp -= pixels[i + 1][j][RED];
+      if (r - 1 < 0 || c - 1 < 0 || r + 1 >= rows || c + 1 >= cols)
+        continue;
+        for(int k = 0; k < 3; k++)  {
+                int temp = 0;
+      temp -= input_pic[r - 1][c][k];
+      temp -= input_pic[r][c - 1][k];
+      temp +=(5 * input_pic[r][c][k]);
+      temp -= input_pic[r][c + 1][k];
+      temp -= input_pic[r + 1][c][k];
 
-      if (temp > 255)
-        out_img[i][j][RED] = 255;
-      else if (temp < 0)
-        out_img[i][j][RED] = 0;
-      else
-        out_img[i][j][RED] = temp;
-
-      temp = 0;
-      temp -= pixels[i - 1][j][BLUE];
-      temp -= pixels[i][j - 1][BLUE];
-      temp += (5 * pixels[i][j][BLUE]);
-      temp -= pixels[i][j + 1][BLUE];
-      temp -= pixels[i + 1][j][BLUE];
-
-      if (temp > 255)
-        out_img[i][j][BLUE] = 255;
-      else if (temp < 0)
-        out_img[i][j][BLUE] = 0;
-      else
-        out_img[i][j][BLUE] = temp;
-
-      temp = 0;
-      temp -= pixels[i - 1][j][GREEN];
-      temp -= pixels[i][j - 1][GREEN];
-      temp += (5 * pixels[i][j][GREEN]);
-      temp -= pixels[i][j + 1][GREEN];
-      temp -= pixels[i + 1][j][GREEN];
-
-      if (temp > 255)
-        out_img[i][j][GREEN] = 255;
-      else if (temp < 0)
-        out_img[i][j][GREEN] = 0;
-      else
-        out_img[i][j][GREEN] = temp;
+      out_img[r][c][k] = min(max(temp, 0), 255);
+        }
     }
     
   }
-
-  for (int i = 1; i < rows - 1; i++){
-    for (int j = 1; j < cols - 1; j++){
-      pixels[i][j] = out_img[i][j];
+ for (int r = 1; r < rows - 1; r++){
+    for (int c = 1; c < cols - 1; c++){
+      if (c <= 0 || c <= 0 || c >= rows - 1 || c >= cols - 1)
+        continue;
+      input_pic[r][c][RED] = out_img[r][c][RED];
+      input_pic[r][c][GREEN] = out_img[r][c][GREEN];
+      input_pic[r][c][BLUE] = out_img[r][c][BLUE];
     }
   }
-  
 }
 void sepia() {
     for (int r = 0; r < rows; r++) {
 		  for (int c = 0; c < cols; c++) { 
-        int red = pixels[r][c][RED], green = pixels[r][c][GREEN], blue = pixels[r][c][BLUE];
-        pixels[r][c][RED]= min(255, (int) (red * T[RED][RED] + green * T[RED][GREEN] + blue * T[RED][BLUE]));
-        pixels[r][c][GREEN] = min(255, (int) (red * T[GREEN][RED] + green * T[GREEN][GREEN] + blue * T[GREEN][BLUE]));
-        pixels[r][c][BLUE] = min(255, (int) (red * T[BLUE][RED] + green * T[BLUE][GREEN] + blue * T[BLUE][BLUE]));
+        int red = input_pic[r][c][RED], green = input_pic[r][c][GREEN], blue = input_pic[r][c][BLUE];
+        input_pic[r][c][RED]= min(255, (int) (red * T[RED][RED] + green * T[RED][GREEN] + blue * T[RED][BLUE]));
+        input_pic[r][c][GREEN] = min(255, (int) (red * T[GREEN][RED] + green * T[GREEN][GREEN] + blue * T[GREEN][BLUE]));
+        input_pic[r][c][BLUE] = min(255, (int) (red * T[BLUE][RED] + green * T[BLUE][GREEN] + blue * T[BLUE][BLUE]));
       }
   }
   return;
@@ -254,9 +226,9 @@ void draw_line(int x1, int y1, int x2, int y2) {
     auto x = static_cast<float>(x1);
     auto y = static_cast<float>(y1);
        for (int i = 0; i <= steps; ++i) {
-          pixels[(int)y][(int)x][RED] = 255;
-          pixels[(int)y][(int)x][GREEN] = 255;
-          pixels[(int)y][(int)x][BLUE] = 255;
+          input_pic[(int)y][(int)x][RED] = 255;
+          input_pic[(int)y][(int)x][GREEN] = 255;
+          input_pic[(int)y][(int)x][BLUE] = 255;
 
           x += xIncrement;
           y += yIncrement;
