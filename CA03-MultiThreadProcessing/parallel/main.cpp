@@ -192,13 +192,13 @@ void* sharpen(void* arg) {
     int thread_last_rows = ((int*)arg)[1];
     if (thread_last_rows == rows - 1)
         thread_last_rows = rows - 2;
- 
- uint8_t out_img[rows][cols][3];
-  for (int r = thread_first_rows; r < thread_last_rows -1  ; r++)
+     uint8_t out_img[rows][cols][3];
+
+  for (int r = thread_first_rows; r < thread_last_rows - 1 ; r++)
   {
     for (int c = 1; c < cols - 1; c++)
     {
-      if (r - 1 < 0 || c - 1 < 0 || r + 1 > rows || c + 1 > cols)
+      if (r - 1 < 0 || c - 1 < 0 || r + 1 >= rows || c + 1 >= cols)
         continue;
         for(int k = 0; k < 3; k++)  {
                 int temp = 0;
@@ -210,17 +210,16 @@ void* sharpen(void* arg) {
 
       out_img[r][c][k] = min(max(temp, 0), 255);
         }
-      
     }
     
   }
- for (int r = thread_first_rows; r < thread_last_rows- 1; r++){
+ for (int r = thread_first_rows; r < thread_last_rows - 1; r++){
     for (int c = 1; c < cols - 1; c++){
-      if (c < 0 || c < 0 || c > rows - 1 || c > cols - 1)
+      if (c <= 0 || c <= 0 || c >= rows - 1 || c >= cols - 1)
         continue;
-      input_pic[c][c][RED] = out_img[c][c][RED];
-      input_pic[c][c][GREEN] = out_img[c][c][GREEN];
-      input_pic[c][c][BLUE] = out_img[c][c][BLUE];
+      input_pic[r][c][RED] = out_img[r][c][RED];
+      input_pic[r][c][GREEN] = out_img[r][c][GREEN];
+      input_pic[r][c][BLUE] = out_img[r][c][BLUE];
     }
   }
  
@@ -298,6 +297,17 @@ void multi_thread_pro(void* (*filter)(void*), int thread_args[NUM_THREADS][2]) {
   }
 }
 
+void apply_filter() {
+    start_end_for_each_thread_COL();
+  srart_end_for_each_thread_ROW();
+
+  multi_thread_pro(&horizontial_mirror, threads_start_end_row);
+  multi_thread_pro(&vertical_mirror, threads_start_end_col);
+  multi_thread_pro(&sharpen, threads_start_end_row);
+  multi_thread_pro(&sepia, threads_start_end_row);
+  multi_thread_pro(&draw_X_shape, threads_start_end_row);
+}
+
 int main(int argc, char *argv[])
 {
   auto start = chrono::high_resolution_clock::now();
@@ -317,14 +327,7 @@ int main(int argc, char *argv[])
   getpixelsFromBMP24(bufferSize, rows, cols, fileBuffer);
 
   // apply filters
-  start_end_for_each_thread_COL();
-  srart_end_for_each_thread_ROW();
-
-  multi_thread_pro(&horizontial_mirror, threads_start_end_row);
-  multi_thread_pro(&vertical_mirror, threads_start_end_col);
-  multi_thread_pro(&sharpen, threads_start_end_row);
-  multi_thread_pro(&sepia, threads_start_end_row);
-  multi_thread_pro(&draw_X_shape, threads_start_end_row);
+  apply_filter();
 
   // write output file
   writeOutBmp24(fileBuffer, OUTPUT_FILE, bufferSize);
